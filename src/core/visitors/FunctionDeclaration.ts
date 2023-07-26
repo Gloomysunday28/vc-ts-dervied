@@ -14,23 +14,23 @@ import * as t from "@babel/types";
  */
 function typePromiseOrAnnotation(
   tsTypeAnotation: FlowType | FlowType[],
-  async: boolean
+  async: boolean,
 ): TypeAnnotation {
   return async
     ? t.typeAnnotation(
-        t.genericTypeAnnotation(
-          t.identifier("Promise"),
-          t.typeParameterInstantiation(
-            Array.isArray(tsTypeAnotation) ? tsTypeAnotation : [tsTypeAnotation]
-          )
+      t.genericTypeAnnotation(
+        t.identifier("Promise"),
+        t.typeParameterInstantiation(
+          Array.isArray(tsTypeAnotation) ? tsTypeAnotation : [tsTypeAnotation]
         )
       )
+    )
     : t.typeAnnotation(tsTypeAnotation as FlowType);
 }
 
 export default function () {
   return {
-    'FunctionDeclaration|ArrowFunctionExpression': {
+    'FunctionDeclaration|ArrowFunctionExpression|ClassMethod': {
       enter(path: Record<string, any>) {
         const tsAstTypes: FlowType[] = [];
         const { body, async, id } = path.node;
@@ -39,6 +39,7 @@ export default function () {
         );
         let typeReference: { content: string; type: string };
         const { argument } = returnAstNode || {};
+
         if (t.isIdentifier(argument)) {
           const bindScopePath = path.scope.bindings[argument.name];
           const returnTypeReference = typePromiseOrAnnotation(
@@ -53,25 +54,27 @@ export default function () {
         } else {
           const returnTypeReference = typePromiseOrAnnotation(
             argument?.type
-              ? generateFlowTypeMaps[argument.type](argument, path)
+              ? generateFlowTypeMaps[argument.type]?.(argument, path)
               : t.voidTypeAnnotation(),
-            async
+            async,
           );
           typeReference = {
             content: generate.default(returnTypeReference).code,
-            type: returnTypeReference.typeAnnotation.type
+            type: returnTypeReference?.typeAnnotation?.type || 'unknown'
           };
         }
 
-        const { node } = path;
-        bullet.addDecorateBullet({
-          ...typeReference,
-          name: id?.name || 'AnonymousReturnType',
-          position: new vscode.Position(
-            node.body.loc.start.line - 1,
-            node.body.loc.start.column
-          ),
-        });
+        if (typeReference) {
+          const { node } = path;
+          bullet.addDecorateBullet({
+            ...typeReference,
+            name: id?.name || 'AnonymousReturnType',
+            position: new vscode.Position(
+              node.body.loc.start.line - 1,
+              node.body.loc.start.column
+            ),
+          });
+        }
 
         path.skip();
       },

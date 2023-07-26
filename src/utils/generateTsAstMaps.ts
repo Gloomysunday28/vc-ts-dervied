@@ -4,6 +4,7 @@
 import type { GenerateTsAstMapsOption } from "../interface/generateTsAstMapsDto";
 import type { KeyofObject, UnionFlowType, LowCaseCame } from "../interface";
 import handleTsAst, { handlePath } from "./handleTsAst";
+import operator from '../utils/helpers/operator'
 import type {
   ObjectTypeProperty,
   ObjectTypeSpreadProperty,
@@ -127,31 +128,31 @@ const generateFlowTypeMap: {
   [key: string]: (...args: unknown[]) => Flow | Flow[] | any;
 } = {
   NumericLiteral: (node: UnionFlowType<Node, 'NumberLiteral'>) => {
-    const { value } = node
+    const { value } = node || {}
     return value ? t.numberLiteralTypeAnnotation(value) : t.numberTypeAnnotation()
   }, // js表达式
   TSNumberKeyword: (node: UnionFlowType<Node, 'NumberLiteral'>) => {
-    const { value } = node
+    const { value } = node || {}
     return value ? t.numberLiteralTypeAnnotation(value) : t.numberTypeAnnotation()
   }, // TS类型
   StringLiteral:  (node: UnionFlowType<Node, 'NumberLiteral'>) => {
-    const { value } = node
+    const { value } = node || {}
     return value ? t.stringLiteralTypeAnnotation(value) : t.stringTypeAnnotation()
   },
   TemplateLiteral: (node: UnionFlowType<Node, 'NumberLiteral'>) => {
-    const { value } = node
+    const { value } = node || {}
     return value ? t.stringLiteralTypeAnnotation(value) : t.stringTypeAnnotation()
   },
   TSStringKeyword: (node: UnionFlowType<Node, 'NumberLiteral'>) => {
-    const { value } = node
+    const { value } = node || {}
     return value ? t.stringLiteralTypeAnnotation(value) : t.stringTypeAnnotation()
   },
   BooleanLiteral: (node: UnionFlowType<Node, 'NumberLiteral'>) => {
-    const { value } = node
+    const { value } = node || {}
     return value ? t.booleanLiteralTypeAnnotation(value) : t.booleanTypeAnnotation()
   },
   TSBooleanKeyword: (node: UnionFlowType<Node, 'NumberLiteral'>) => {
-    const { value } = node
+    const { value } = node || {}
     return value ? t.booleanLiteralTypeAnnotation(value) : t.booleanTypeAnnotation()
   },
   ParamterDeclaration: (params: UnionFlowType<Node, "Identifier">[]) => {
@@ -330,6 +331,14 @@ const generateFlowTypeMap: {
     }
 
     return null;
+  },
+  BinaryExpression(node: UnionFlowType<Flow, "BinaryExpression">) {
+    const referenceType = operator.operatorType(node.operator)
+    return generateFlowTypeMap[referenceType]?.()
+  },
+  LogicalExpression(node: UnionFlowType<Flow, "LogicalExpression">) {
+    const referenceType = operator.operatorType(node.operator)
+    return referenceType
   },
 };
 
