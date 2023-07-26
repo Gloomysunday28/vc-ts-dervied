@@ -45519,7 +45519,7 @@ exports["default"] = Hub;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const FunctionDeclaration_1 = __webpack_require__(183);
 exports["default"] = {
-    ...(0, FunctionDeclaration_1.default)()
+    ...(0, FunctionDeclaration_1.default)(),
 };
 
 
@@ -45536,6 +45536,12 @@ const bullet_1 = __webpack_require__(188);
 const generate = __webpack_require__(2);
 const vscode = __webpack_require__(1);
 const t = __webpack_require__(14);
+/**
+ * @description 兼容async await语法的TypeReference
+ * @param tsTypeAnotation {FlowType | FlowType[]}
+ * @param async boolean
+ * @returns TypeAnnotation
+ */
 function typePromiseOrAnnotation(tsTypeAnotation, async) {
     return async
         ? t.typeAnnotation(t.genericTypeAnnotation(t.identifier("Promise"), t.typeParameterInstantiation(Array.isArray(tsTypeAnotation) ? tsTypeAnotation : [tsTypeAnotation])))
@@ -45543,28 +45549,38 @@ function typePromiseOrAnnotation(tsTypeAnotation, async) {
 }
 function default_1() {
     return {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        FunctionDeclaration(path) {
-            const tsAstTypes = [];
-            const { body, async } = path.node;
-            const returnAstNode = body.body?.find((node) => t.isReturnStatement(node));
-            let str;
-            const { argument } = returnAstNode || {};
-            if (t.isIdentifier(argument)) {
-                const bindScopePath = path.scope.bindings[argument.name];
-                str = new vscode.SnippetString(generate.default(typePromiseOrAnnotation(handleTsAst_1.default.Identifier(bindScopePath, tsAstTypes), async)).code);
-            }
-            else {
-                str = new vscode.SnippetString(generate.default(typePromiseOrAnnotation(argument?.type
-                    ? generateTsAstMaps_1.generateFlowTypeMaps[argument.type](argument, path)
-                    : t.voidTypeAnnotation(), async)).code);
-            }
-            // str.value = '// ' + str.value
-            const { node } = path;
-            bullet_1.default.addBullet({
-                content: str,
-                position: new vscode.Position(node.body.loc.start.line - 1, node.body.loc.start.column)
-            });
+        'FunctionDeclaration|ArrowFunctionExpression': {
+            enter(path) {
+                const tsAstTypes = [];
+                const { body, async, id } = path.node;
+                const returnAstNode = body.body?.find((node) => t.isReturnStatement(node));
+                let typeReference;
+                const { argument } = returnAstNode || {};
+                if (t.isIdentifier(argument)) {
+                    const bindScopePath = path.scope.bindings[argument.name];
+                    const returnTypeReference = typePromiseOrAnnotation(handleTsAst_1.default.Identifier(bindScopePath, tsAstTypes), async);
+                    typeReference = {
+                        content: generate.default(returnTypeReference).code,
+                        type: returnTypeReference.typeAnnotation.type,
+                    };
+                }
+                else {
+                    const returnTypeReference = typePromiseOrAnnotation(argument?.type
+                        ? generateTsAstMaps_1.generateFlowTypeMaps[argument.type](argument, path)
+                        : t.voidTypeAnnotation(), async);
+                    typeReference = {
+                        content: generate.default(returnTypeReference).code,
+                        type: returnTypeReference.typeAnnotation.type
+                    };
+                }
+                const { node } = path;
+                bullet_1.default.addDecorateBullet({
+                    ...typeReference,
+                    name: id?.name || 'AnonymousReturnType',
+                    position: new vscode.Position(node.body.loc.start.line - 1, node.body.loc.start.column),
+                });
+                path.skip();
+            },
         },
     };
 }
@@ -45635,12 +45651,34 @@ const generateTsTypeMap = {
 };
 //  js类型与Flow ast映射关系 只针对该类型生成TSType
 const generateFlowTypeMap = {
-    NumericLiteral: t.numberTypeAnnotation,
-    TSNumberKeyword: t.numberTypeAnnotation,
-    StringLiteral: t.stringTypeAnnotation,
-    TSStringKeyword: t.stringTypeAnnotation,
-    BooleanLiteral: t.booleanTypeAnnotation,
-    TSBooleanKeyword: t.booleanTypeAnnotation,
+    NumericLiteral: (node) => {
+        const { value } = node;
+        return value ? t.numberLiteralTypeAnnotation(value) : t.numberTypeAnnotation();
+    },
+    TSNumberKeyword: (node) => {
+        const { value } = node;
+        return value ? t.numberLiteralTypeAnnotation(value) : t.numberTypeAnnotation();
+    },
+    StringLiteral: (node) => {
+        const { value } = node;
+        return value ? t.stringLiteralTypeAnnotation(value) : t.stringTypeAnnotation();
+    },
+    TemplateLiteral: (node) => {
+        const { value } = node;
+        return value ? t.stringLiteralTypeAnnotation(value) : t.stringTypeAnnotation();
+    },
+    TSStringKeyword: (node) => {
+        const { value } = node;
+        return value ? t.stringLiteralTypeAnnotation(value) : t.stringTypeAnnotation();
+    },
+    BooleanLiteral: (node) => {
+        const { value } = node;
+        return value ? t.booleanLiteralTypeAnnotation(value) : t.booleanTypeAnnotation();
+    },
+    TSBooleanKeyword: (node) => {
+        const { value } = node;
+        return value ? t.booleanLiteralTypeAnnotation(value) : t.booleanTypeAnnotation();
+    },
     ParamterDeclaration: (params) => {
         return t.typeParameterDeclaration(params.map((param) => t.typeParameter(t.typeAnnotation(generateFlowTypeMap[param.typeAnnotation
             .typeAnnotation?.type]?.()))));
@@ -45649,16 +45687,38 @@ const generateFlowTypeMap = {
         return params?.map((param) => t.functionTypeParam(t.identifier(param.name), generateFlowTypeMap[param.typeAnnotation
             .typeAnnotation?.type]?.()));
     },
-    FunctionExpression: (node) => {
+    FunctionExpression: (node, path, options) => {
         const { params } = node;
         const paramsType = generateFlowTypeMap.ParamterDeclaration(params);
         const functionParams = generateFlowTypeMap.FunctionTypeParam(params);
         const restParams = null;
-        return t.functionTypeAnnotation(paramsType, functionParams, restParams, t.anyTypeAnnotation());
+        return t.functionTypeAnnotation(paramsType, functionParams, restParams, options.returnType ? generateFlowTypeMap[options.returnType.type](options.returnType) : t.anyTypeAnnotation());
     },
     VariableDeclarator: (node, path, option) => {
         const { init } = node;
         return exports.generateTsTypeMaps[init?.type]?.(init, path, option);
+    },
+    NewExpression(node, path) {
+        const { callee, arguments: bodyState } = node;
+        const [argument] = bodyState;
+        let returnType;
+        if (argument &&
+            (t.isFunctionExpression(argument) || t.isArrowFunctionExpression(argument)) &&
+            (argument.params || []).length) {
+            const { body } = argument;
+            const returnStatement = (body.body || []).find((param) => t.isReturnStatement(param));
+            if (returnStatement && t.isCallExpression(returnStatement.argument)) {
+                const { argument } = returnStatement;
+                returnType = argument.arguments?.[0];
+            }
+        }
+        return t.objectTypeAnnotation([
+            t.objectTypeProperty(t.stringLiteral(`new ${callee.name}`), generateFlowTypeMap.FunctionExpression({
+                params: [],
+            }, path, {
+                returnType
+            })),
+        ]);
     },
     ObjectExpression: (node, path, option) => {
         if (Array.isArray(node)) {
@@ -45668,7 +45728,8 @@ const generateFlowTypeMap = {
             const { properties } = node;
             return t.objectTypeAnnotation(properties.map((propert) => {
                 if (propert.key) {
-                    return t.objectTypeProperty(t.stringLiteral((propert.key?.name || propert.key)), generateFlowTypeMap[propert.value.type](node, path), option?.optional ? t.variance("minus") : null);
+                    return t.objectTypeProperty(t.stringLiteral((propert.key?.name ||
+                        propert.key)), generateFlowTypeMap[propert.value.type](node, path), option?.optional ? t.variance("minus") : null);
                 }
             }));
         }
@@ -45703,7 +45764,7 @@ const generateFlowTypeMap = {
     ArrayExpression: (node, path) => {
         const { elements } = node;
         if (Array.isArray(elements)) {
-            return t.tupleTypeAnnotation(elements?.map(ele => {
+            return t.tupleTypeAnnotation(elements?.map((ele) => {
                 if (t.isIdentifier(ele)) {
                     const bindScopePath = path.scope.bindings[ele.name];
                     return handleTsAst_1.default.Identifier(bindScopePath, []);
@@ -45712,7 +45773,7 @@ const generateFlowTypeMap = {
             }));
         }
         return null;
-    }
+    },
 };
 // 联合类型
 const baseTsAstMaps = [
@@ -45911,27 +45972,137 @@ exports.SureFlowType = SureFlowType;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const vscode = __webpack_require__(1);
+const format_1 = __webpack_require__(189);
+const string_1 = __webpack_require__(190);
+const author_1 = __webpack_require__(191);
 class Bullet {
     constructor() {
         this.lineCount = 0;
-        this.bullet = [];
+        this.decorateBullet = [];
     }
-    addBullet(bullet) {
-        const value = bullet.content.value;
-        if (this.lineCount) {
-            bullet.position = new vscode.Position(bullet.position.line + this.lineCount, bullet.position.character);
-        }
-        const count = value?.match(/(\n)/g)?.length;
-        if (count) {
-            this.lineCount += count;
-        }
-        this.bullet.push(bullet);
+    clearDecorateBullet() {
+        this.decorateBullet.length = 0;
     }
-    clearBullet() {
-        this.bullet.length = 0;
+    generateInterface(bullet) {
+        const { content } = bullet;
+        const length = content?.match(/(\n)/g)?.length;
+        if (length) {
+            const genericName = `${string_1.default.uppcase(bullet.name)}ReturnType`;
+            bullet.hoverMessage = new vscode.MarkdownString('类型详细情况如下 \n', true);
+            bullet.hoverMessage.supportHtml = true;
+            bullet.hoverMessage.isTrusted = true;
+            bullet.hoverMessage.appendCodeblock(format_1.default.formatCode(content.slice(2), {
+                prefix: `interface ${genericName} ${string_1.default.filterStr(bullet.type, '{', '', '\n')}`,
+                reg: /\n/g,
+                replacePrefix: '\n',
+                format: "\t".repeat(bullet.type === 'ObjectTypeAnnotation' ? 0 : 1),
+                postfix: `\n${string_1.default.filterStr(bullet.type, `}`)}${author_1.default}`,
+            }));
+            bullet.content = string_1.default.padStart(genericName, ': ');
+        }
+        bullet.content = string_1.default.padEnd(bullet.content, ' ');
+        return bullet;
+    }
+    addDecorateBullet(decorateBullet) {
+        const bullet = this.generateInterface(decorateBullet);
+        if (!this.decorateBullet.includes(bullet)) {
+            this.decorateBullet.push(bullet);
+        }
+    }
+    renderTextDocument() {
+        const auditor = vscode.window.activeTextEditor;
+        const annotationDecoration = vscode.window.createTextEditorDecorationType({
+            after: {
+                color: "#69676c",
+                textDecoration: "none",
+            },
+            isWholeLine: true,
+            rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
+        });
+        const range = this.decorateBullet.map((bullet) => ({
+            renderOptions: {
+                after: {
+                    contentText: bullet.content,
+                },
+            },
+            range: auditor.document.validateRange(new vscode.Range(bullet.position, bullet.position)),
+            hoverMessage: bullet.hoverMessage,
+        }));
+        auditor.setDecorations(annotationDecoration, range);
     }
 }
 exports["default"] = new Bullet();
+
+
+/***/ }),
+/* 189 */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+class Format {
+    formatCode(str, options) {
+        switch (typeof str) {
+            case "string":
+                return this.formatString(str, options);
+            case "object":
+                break;
+            default:
+                break;
+        }
+    }
+    formatString(str, options) {
+        const formatterRegular = options.format;
+        const prefix = `${options.prefix || ""}${formatterRegular}`;
+        return (prefix +
+            str.replace(options.reg, `${options.replacePrefix || ""}${formatterRegular}`) +
+            `${options.postfix}`);
+    }
+}
+exports["default"] = new Format();
+
+
+/***/ }),
+/* 190 */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports["default"] = {
+    uppcase(str) {
+        return `${str.slice(0, 1).toUpperCase()}${str.slice(1)}`;
+    },
+    padStart(str, prefix) {
+        return `${prefix || ''}${str}`;
+    },
+    padEnd(str, post) {
+        return `${str}${post || ''}`;
+    },
+    filterStr(type, filterStr, prefix, postfix) {
+        if (type === 'ObjectTypeAnnotation') {
+            return '';
+        }
+        return this.padEnd(this.padStart(filterStr, prefix), postfix);
+    },
+};
+
+
+/***/ }),
+/* 191 */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports["default"] = `
+-----------------------
+作者信息
+-----------------------
+"Plugin's Author is: Cai"
+"Contact phone: github.com"
+`;
 
 
 /***/ })
@@ -45983,39 +46154,18 @@ var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.deactivate = exports.activate = void 0;
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 const vscode = __webpack_require__(1);
 const parse_1 = __webpack_require__(114);
 const traverse_1 = __webpack_require__(116);
-const bullet_1 = __webpack_require__(188);
 const visitors_1 = __webpack_require__(182);
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+const bullet_1 = __webpack_require__(188);
 function activate(context) {
     const auditor = vscode.window.activeTextEditor;
     const code = auditor.document.getText();
     (0, traverse_1.traverseAst)((0, parse_1.parseAst)(code), visitors_1.default);
-    bullet_1.default.bullet.forEach((bullet, index) => {
-        setTimeout(() => {
-            vscode.window.activeTextEditor.insertSnippet(bullet.content, bullet.position);
-        }, index * (index * 100));
-    });
-    // Use the console to output diagnostic information (console.log) and errors (console.error)
-    // This line of code will only be executed once when your extension is activated
-    console.log('Congratulations, your extension "t-typescript-auto-derive" is now active!');
-    // The command has been defined in the package.json file
-    // Now provide the implementation of the command with registerCommand
-    // The commandId parameter must match the command field in package.json
-    let disposable = vscode.commands.registerCommand("t-typescript-auto-derive.helloWorld", () => {
-        // The code you place here will be executed every time your command is executed
-        // Display a message box to the user
-        vscode.window.showInformationMessage("Hello World from t typescript-auto-derive!");
-    });
-    context.subscriptions.push(disposable);
+    bullet_1.default.renderTextDocument();
 }
 exports.activate = activate;
-// This method is called when your extension is deactivated
 function deactivate() { }
 exports.deactivate = deactivate;
 

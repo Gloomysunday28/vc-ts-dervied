@@ -1,5 +1,5 @@
 import FunctionDeclaration from './FunctionDeclaration';
 
-export default {
-  ...FunctionDeclaration()
+export default  {
+  ...FunctionDeclaration(),
 };
