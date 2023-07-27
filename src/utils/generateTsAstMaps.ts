@@ -286,17 +286,11 @@ const generateFlowTypeMap: {
                   (((propert as ObjectTypeProperty).key as Identifier)?.name ||
                     (propert as ObjectTypeProperty).key) as string
                 ),
-                baseTsAstMaps.includes(
-                  (propert as ObjectTypeProperty).value.type
+                t.tsTypeAnnotation(
+                  generateFlowTypeMap[
+                    (propert as ObjectTypeProperty).value.type
+                  ](propert.value, path)
                 )
-                  ? t.tsTypeAnnotation(
-                      generateFlowTypeMap[
-                        (propert as ObjectTypeProperty).value.type
-                      ](propert.value, path)
-                    )
-                  : generateFlowTypeMap[
-                      (propert as ObjectTypeProperty).value.type
-                    ](propert.value, path)
               );
 
               tsType.optional =
@@ -350,7 +344,15 @@ const generateFlowTypeMap: {
       //   return handleTsAst.Identifier(path.scope.getBinding(object.name), []);
       // }
       const { name } = property;
-      const tsType = t.tsPropertySignature(t.stringLiteral(name), generateFlowTypeMap.baseTsAstMapsExpression(parent, parent?.right?.type, option, path));
+      const tsType = t.tsPropertySignature(
+        t.stringLiteral(name),
+        generateFlowTypeMap.baseTsAstMapsExpression(
+          parent,
+          parent?.right?.type,
+          option,
+          path
+        )
+      );
       tsType.optional = option.optional;
       return tsType;
     } else if (property.type === "PrivateName") {

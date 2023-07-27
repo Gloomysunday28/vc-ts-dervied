@@ -45772,9 +45772,7 @@ const generateFlowTypeMap = {
             return t.TSTypeLiteral(properties.map((propert) => {
                 if (propert.key) {
                     const tsType = t.tsPropertySignature(t.stringLiteral((propert.key?.name ||
-                        propert.key)), baseTsAstMaps.includes(propert.value.type)
-                        ? t.tsTypeAnnotation(generateFlowTypeMap[propert.value.type](propert.value, path))
-                        : generateFlowTypeMap[propert.value.type](propert.value, path));
+                        propert.key)), t.tsTypeAnnotation(generateFlowTypeMap[propert.value.type](propert.value, path)));
                     tsType.optional =
                         option?.optional || t.isOptionalMemberExpression(propert.value);
                     return tsType;
