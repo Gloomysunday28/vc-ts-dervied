@@ -107,20 +107,20 @@ const generateTsTypeMap: {
   //     // expression 表达式
   //   }
   // },
-  ArrowFunctionExpression: (
-    node: UnionFlowType<Flow, "ArrowFunctionExpression">,
-    path,
-    { tsTypes }: GenerateTsAstMapsOption
-  ) => {
-    const { params = [] } = node;
-    const paramsType = generateTsTypeMap.TsTypeParameterDeclaration(params);
+  // ArrowFunctionExpression: (
+  //   node: UnionFlowType<Flow, "ArrowFunctionExpression">,
+  //   path,
+  //   { tsTypes }: GenerateTsAstMapsOption
+  // ) => {
+  //   const { params = [] } = node;
+  //   const paramsType = generateTsTypeMap.TsTypeParameterDeclaration(params);
 
-    return t.tsFunctionType(
-      paramsType,
-      params.map((param) => t.identifier(param.name)),
-      handleTsAst.Identifier(path, tsTypes)
-    );
-  },
+  //   return t.tsFunctionType(
+  //     paramsType,
+  //     params.map((param) => t.identifier(param.name)),
+  //     handleTsAst.Identifier(path, tsTypes)
+  //   );
+  // },
 };
 
 //  js类型与Flow ast映射关系 只针对该类型生成TSType
@@ -302,25 +302,38 @@ const generateFlowTypeMap: {
       );
     }
   },
-  // 箭头函数
   ArrowFunctionExpression: (
-    node: UnionFlowType<Node, "ArrowFunctionExpression">,
-    path: any
+    node: UnionFlowType<Flow, "ArrowFunctionExpression">,
+    path,
   ) => {
-    const { body } = node;
-    if (t.isIdentifier(body)) {
-      const { name } = body as UnionFlowType<Node, "Identifier">;
-      const bindScopePath = path.scope.bindings[name];
-      return t.functionTypeAnnotation(
-        null,
-        [],
-        null,
-        handlePath(bindScopePath, [])
-      );
-    } else if (generateFlowTypeMap[body.type]) {
-      return generateFlowTypeMap[body.type](body, path);
-    }
+    const { params = [], body } = node;
+    const paramsType = generateTsTypeMap.TsTypeParameterDeclaration(params);
+
+    return t.tsFunctionType(
+      paramsType,
+      params.map((param) => t.identifier(param.name)),
+      t.tsTypeAnnotation(t.isIdentifier(body) ? handleTsAst.Identifier(path.scope.getBinding(body.name), []) : generateFlowTypeMaps[body.type](body, path))
+    );
   },
+  // 箭头函数
+  // ArrowFunctionExpression: (
+  //   node: UnionFlowType<Node, "ArrowFunctionExpression">,
+  //   path: any
+  // ) => {
+  //   const { body } = node;
+  //   if (t.isIdentifier(body)) {
+  //     const { name } = body as UnionFlowType<Node, "Identifier">;
+  //     const bindScopePath = path.scope.bindings[name];
+  //     return t.functionTypeAnnotation(
+  //       null,
+  //       [],
+  //       null,
+  //       handlePath(bindScopePath, [])
+  //     );
+  //   } else if (generateFlowTypeMap[body.type]) {
+  //     return generateFlowTypeMap[body.type](body, path);
+  //   }
+  // },
   // 对象属性
   MemberExpression: (
     node: UnionFlowType<Node, "MemberExpression">,
@@ -330,19 +343,6 @@ const generateFlowTypeMap: {
     const { property, object } = node;
     const { parent } = path;
     if (property.type === "Identifier") {
-      // if (object.type === "ArrayExpression") {
-      //   const { name } = property;
-      //   let type;
-      //   try {
-      //     type = typeof Array.prototype[name](() => {});
-      //   } catch (err) {}
-
-      //   return type === "object"
-      //     ? t.arrayTypeAnnotation(generateFlowTypeMap.NumericLiteral())
-      //     : generateFlowTypeMap[type]?.();
-      // } else if (object.type === "Identifier") {
-      //   return handleTsAst.Identifier(path.scope.getBinding(object.name), []);
-      // }
       const { name } = property;
       const tsType = t.tsPropertySignature(
         t.stringLiteral(name),
@@ -372,8 +372,8 @@ const generateFlowTypeMap: {
   ) => {
     const { elements } = node;
     if (Array.isArray(elements)) {
-      return t.tupleTypeAnnotation(
-        (elements as Flow[])?.map((ele) => {
+      return t.tsTupleType(
+        (elements as TSType[])?.map((ele) => {
           if (t.isIdentifier(ele)) {
             const bindScopePath =
               path.scope.bindings[(ele as unknown as Identifier).name];

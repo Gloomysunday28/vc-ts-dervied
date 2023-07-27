@@ -45666,11 +45666,19 @@ const generateTsTypeMap = {
     //     // expression 表达式
     //   }
     // },
-    ArrowFunctionExpression: (node, path, { tsTypes }) => {
-        const { params = [] } = node;
-        const paramsType = generateTsTypeMap.TsTypeParameterDeclaration(params);
-        return t.tsFunctionType(paramsType, params.map((param) => t.identifier(param.name)), handleTsAst_1.default.Identifier(path, tsTypes));
-    },
+    // ArrowFunctionExpression: (
+    //   node: UnionFlowType<Flow, "ArrowFunctionExpression">,
+    //   path,
+    //   { tsTypes }: GenerateTsAstMapsOption
+    // ) => {
+    //   const { params = [] } = node;
+    //   const paramsType = generateTsTypeMap.TsTypeParameterDeclaration(params);
+    //   return t.tsFunctionType(
+    //     paramsType,
+    //     params.map((param) => t.identifier(param.name)),
+    //     handleTsAst.Identifier(path, tsTypes)
+    //   );
+    // },
 };
 //  js类型与Flow ast映射关系 只针对该类型生成TSType
 const generateFlowTypeMap = {
@@ -45780,35 +45788,35 @@ const generateFlowTypeMap = {
             }));
         }
     },
-    // 箭头函数
     ArrowFunctionExpression: (node, path) => {
-        const { body } = node;
-        if (t.isIdentifier(body)) {
-            const { name } = body;
-            const bindScopePath = path.scope.bindings[name];
-            return t.functionTypeAnnotation(null, [], null, (0, handleTsAst_1.handlePath)(bindScopePath, []));
-        }
-        else if (generateFlowTypeMap[body.type]) {
-            return generateFlowTypeMap[body.type](body, path);
-        }
+        const { params = [], body } = node;
+        const paramsType = generateTsTypeMap.TsTypeParameterDeclaration(params);
+        return t.tsFunctionType(paramsType, params.map((param) => t.identifier(param.name)), t.tsTypeAnnotation(t.isIdentifier(body) ? handleTsAst_1.default.Identifier(path.scope.getBinding(body.name), []) : exports.generateFlowTypeMaps[body.type](body, path)));
     },
+    // 箭头函数
+    // ArrowFunctionExpression: (
+    //   node: UnionFlowType<Node, "ArrowFunctionExpression">,
+    //   path: any
+    // ) => {
+    //   const { body } = node;
+    //   if (t.isIdentifier(body)) {
+    //     const { name } = body as UnionFlowType<Node, "Identifier">;
+    //     const bindScopePath = path.scope.bindings[name];
+    //     return t.functionTypeAnnotation(
+    //       null,
+    //       [],
+    //       null,
+    //       handlePath(bindScopePath, [])
+    //     );
+    //   } else if (generateFlowTypeMap[body.type]) {
+    //     return generateFlowTypeMap[body.type](body, path);
+    //   }
+    // },
     // 对象属性
     MemberExpression: (node, path, option) => {
         const { property, object } = node;
         const { parent } = path;
         if (property.type === "Identifier") {
-            // if (object.type === "ArrayExpression") {
-            //   const { name } = property;
-            //   let type;
-            //   try {
-            //     type = typeof Array.prototype[name](() => {});
-            //   } catch (err) {}
-            //   return type === "object"
-            //     ? t.arrayTypeAnnotation(generateFlowTypeMap.NumericLiteral())
-            //     : generateFlowTypeMap[type]?.();
-            // } else if (object.type === "Identifier") {
-            //   return handleTsAst.Identifier(path.scope.getBinding(object.name), []);
-            // }
             const { name } = property;
             const tsType = t.tsPropertySignature(t.stringLiteral(name), generateFlowTypeMap.baseTsAstMapsExpression(parent, parent?.right?.type, option, path));
             tsType.optional = option.optional;
@@ -45829,7 +45837,7 @@ const generateFlowTypeMap = {
     ArrayExpression: (node, path) => {
         const { elements } = node;
         if (Array.isArray(elements)) {
-            return t.tupleTypeAnnotation(elements?.map((ele) => {
+            return t.tsTupleType(elements?.map((ele) => {
                 if (t.isIdentifier(ele)) {
                     const bindScopePath = path.scope.bindings[ele.name];
                     return handleTsAst_1.default.Identifier(bindScopePath, []);
