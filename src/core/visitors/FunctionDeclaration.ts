@@ -34,49 +34,60 @@ export default function () {
       enter(path: Record<string, any>) {
         const tsAstTypes: FlowType[] = [];
         const { body, async, id } = path.node;
-        const returnAstNode = body.body?.find((node: Node) =>
-          t.isReturnStatement(node)
-        );
-        let typeReference: { content: string; type: string };
-        const { argument } = returnAstNode || {};
-
-        if (t.isIdentifier(argument)) {
-          const bindScopePath = path.scope.bindings[argument.name];
-          const returnTypeReference = typePromiseOrAnnotation(
-            handleTsAst.Identifier(bindScopePath, tsAstTypes),
-            async
-          );
-
-          typeReference = {
-            content: generate.default(returnTypeReference).code,
-            type: returnTypeReference.typeAnnotation.type,
-          };
-        } else {
-          const returnTypeReference = typePromiseOrAnnotation(
-            argument?.type
-              ? generateFlowTypeMaps[argument.type]?.(argument, path)
-              : t.voidTypeAnnotation(),
-            async,
-          );
-          typeReference = {
-            content: generate.default(returnTypeReference).code,
-            type: returnTypeReference?.typeAnnotation?.type || 'unknown'
-          };
-        }
-
-        if (typeReference) {
+        try {
+          const returnAstNode = handleTsAst.ReturnStatement(body);
+          let typeReference: { content: string; type: string };
+          const { argument } = returnAstNode || {};
+          
+          if (t.isIdentifier(argument)) {
+            const bindScopePath = path.scope.bindings[argument.name];
+            const returnTypeReference = typePromiseOrAnnotation(
+              handleTsAst.Identifier(bindScopePath, tsAstTypes),
+              async
+            );
+  
+            typeReference = {
+              content: generate.default(returnTypeReference).code,
+              type: returnTypeReference.typeAnnotation.type,
+            };
+          } else {
+            const returnTypeReference = typePromiseOrAnnotation(
+              argument?.type
+                ? generateFlowTypeMaps[argument.type]?.(argument, path)
+                : t.voidTypeAnnotation(),
+              async,
+            );
+            typeReference = { 
+              content: generate.default(returnTypeReference).code,
+              type: returnTypeReference?.typeAnnotation?.type || 'unknown'
+            };
+          }
+  
+          if (typeReference) {
+            const { node } = path;
+            bullet.addDecorateBullet({
+              ...typeReference,
+              name: id?.name || 'AnonymousReturnType',
+              position: new vscode.Position(
+                node.body.loc.start.line - 1,
+                node.body.loc.start.column
+              ),
+            });
+          }
+          path.skip();
+        } catch(err) {
           const { node } = path;
           bullet.addDecorateBullet({
-            ...typeReference,
+            content: async ? ': Promise<?>' : ': ?',
+            type: '?',
             name: id?.name || 'AnonymousReturnType',
             position: new vscode.Position(
               node.body.loc.start.line - 1,
               node.body.loc.start.column
             ),
           });
+          path.skip();
         }
-
-        path.skip();
       },
     },
   };

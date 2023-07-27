@@ -7,7 +7,7 @@ import {
 } from "./generateTsAstMaps";
 import type { Node, Flow } from '@babel/types'
 import type { UnionFlowType } from '../interface'
-import { handleRerencePath } from "./handleTsAst";
+import handleTsAst, { handleRerencePath } from "./handleTsAst";
 const t = require("@babel/types");
 
 const getNodeProperty =  {
@@ -25,9 +25,15 @@ const getNodeProperty =  {
       return right
     }
   },
+  CallExpression() {
+    
+  }
 }
 
 const handleTsAstMaps =  {
+  Identifier(node: UnionFlowType<Node, 'Identifier'>, tsAstTypes: Flow[], path: any) {
+    // return handleTsAst.Identifier(path.scope.getBinding(node.name), tsAstTypes);
+  },
   AssignmentExpression: (node: UnionFlowType<Node, 'AssignmentExpression'>, tsAstTypes: Flow[], path: any) => {
     const { left } = node
     
@@ -44,7 +50,7 @@ const handleTsAstMaps =  {
   },
   MemberExpression: (containerNode, tsAstTypes, path) => {
     const property = containerNode.property.name as string;
-    const isIdentifier = t.isIdentifier(getNodeProperty[path.parentPath.container.type](path.parentPath.container));
+    const isIdentifier = t.isIdentifier(getNodeProperty[path.parentPath.container.type](path.parentPath.container, path));
     if (isIdentifier) {
       const variable = path.parentPath.scope.bindings[property];
       (variable.path.container || [])?.forEach((node) => {
