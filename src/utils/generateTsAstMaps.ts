@@ -130,63 +130,43 @@ const generateFlowTypeMap: {
   undefined: t.voidTypeAnnotation,
   number: (node: UnionFlowType<Node, "NumberLiteral">) => {
     const { value } = node || {};
-    return value
-      ? t.numberLiteralTypeAnnotation(value)
-      : t.numberTypeAnnotation();
+    return value ? t.tsLiteralType(node) : t.TSNumberKeyword();
   }, // js表达式
   NumericLiteral: (node: UnionFlowType<Node, "NumberLiteral">) => {
     const { value } = node || {};
-    return value
-      ? t.numberLiteralTypeAnnotation(value)
-      : t.numberTypeAnnotation();
+    return value ? t.tsLiteralType(node) : t.TSNumberKeyword();
   }, // js表达式
   TSNumberKeyword: (node: UnionFlowType<Node, "NumberLiteral">) => {
     const { value } = node || {};
-    return value
-      ? t.numberLiteralTypeAnnotation(value)
-      : t.numberTypeAnnotation();
+    return value ? t.tsLiteralType(node) : t.TSNumberKeyword();
   }, // TS类型
   string: (node: UnionFlowType<Node, "StringLiteral">) => {
     const { value } = node || {};
-    return value
-      ? t.stringLiteralTypeAnnotation(value)
-      : t.stringTypeAnnotation();
+    return value ? t.tsLiteralType(node) : t.TSStringKeyword();
   },
   StringLiteral: (node: UnionFlowType<Node, "StringLiteral">) => {
     const { value } = node || {};
-    return value
-      ? t.stringLiteralTypeAnnotation(value)
-      : t.stringTypeAnnotation();
+    return value ? t.tsLiteralType(node) : t.TSStringKeyword();
   },
   TemplateLiteral: (node: UnionFlowType<Node, "StringLiteral">) => {
     const { value } = node || {};
-    return value
-      ? t.stringLiteralTypeAnnotation(value)
-      : t.stringTypeAnnotation();
+    return value ? t.tsLiteralType(node) : t.TSStringKeyword();
   },
   TSStringKeyword: (node: UnionFlowType<Node, "StringLiteral">) => {
     const { value } = node || {};
-    return value
-      ? t.stringLiteralTypeAnnotation(value)
-      : t.stringTypeAnnotation();
+    return value ? t.tsLiteralType(node) : t.TSStringKeyword();
   },
   boolean: (node: UnionFlowType<Node, "BooleanLiteral">) => {
     const { value } = node || {};
-    return value
-      ? t.booleanLiteralTypeAnnotation(value)
-      : t.booleanTypeAnnotation();
+    return value ? t.tsLiteralType(node) : t.TSBooleanKeyword();
   },
   BooleanLiteral: (node: UnionFlowType<Node, "BooleanLiteral">) => {
     const { value } = node || {};
-    return value
-      ? t.booleanLiteralTypeAnnotation(value)
-      : t.booleanTypeAnnotation();
+    return value ? t.tsLiteralType(node) : t.TSBooleanKeyword();
   },
   TSBooleanKeyword: (node: UnionFlowType<Node, "BooleanLiteral">) => {
     const { value } = node || {};
-    return value
-      ? t.booleanLiteralTypeAnnotation(value)
-      : t.booleanTypeAnnotation();
+    return value ? t.tsLiteralType(node) : t.TSBooleanKeyword();
   },
   ParamterDeclaration: (params: UnionFlowType<Node, "Identifier">[]) => {
     return t.typeParameterDeclaration(
@@ -297,23 +277,31 @@ const generateFlowTypeMap: {
       return t.objectTypeAnnotation(node);
     } else {
       const { properties } = node;
-      return t.objectTypeAnnotation(
+      return t.TSTypeLiteral(
         properties.map(
           (propert: ObjectTypeProperty | ObjectTypeSpreadProperty) => {
             if ((propert as ObjectTypeProperty).key) {
-              return t.objectTypeProperty(
+              const tsType = t.tsPropertySignature(
                 t.stringLiteral(
                   (((propert as ObjectTypeProperty).key as Identifier)?.name ||
                     (propert as ObjectTypeProperty).key) as string
                 ),
-                generateFlowTypeMap[(propert as ObjectTypeProperty).value.type](
-                  propert.value,
-                  path
-                ),
-                option?.optional || t.isOptionalMemberExpression(propert.value)
-                  ? t.variance("minus")
-                  : null
+                baseTsAstMaps.includes(
+                  (propert as ObjectTypeProperty).value.type
+                )
+                  ? t.tsTypeAnnotation(
+                      generateFlowTypeMap[
+                        (propert as ObjectTypeProperty).value.type
+                      ](propert.value, path)
+                    )
+                  : generateFlowTypeMap[
+                      (propert as ObjectTypeProperty).value.type
+                    ](propert.value, path)
               );
+
+              tsType.optional =
+                option?.optional || t.isOptionalMemberExpression(propert.value);
+              return tsType;
             }
           }
         ) as Array<ObjectTypeProperty | ObjectTypeSpreadProperty>
@@ -348,29 +336,32 @@ const generateFlowTypeMap: {
     const { property, object } = node;
     const { parent } = path;
     if (property.type === "Identifier") {
-      if (object.type === "ArrayExpression") {
-        const { name } = property;
-        let type;
-        try {
-          type = typeof Array.prototype[name](() => {});
-        } catch (err) {}
+      // if (object.type === "ArrayExpression") {
+      //   const { name } = property;
+      //   let type;
+      //   try {
+      //     type = typeof Array.prototype[name](() => {});
+      //   } catch (err) {}
 
-        return type === "object"
-          ? t.arrayTypeAnnotation(generateFlowTypeMap.NumericLiteral())
-          : generateFlowTypeMap[type]?.();
-      } else if (object.type === "Identifier") {
-        return handleTsAst.Identifier(path.scope.getBinding(object.name), [])
-      }
+      //   return type === "object"
+      //     ? t.arrayTypeAnnotation(generateFlowTypeMap.NumericLiteral())
+      //     : generateFlowTypeMap[type]?.();
+      // } else if (object.type === "Identifier") {
+      //   return handleTsAst.Identifier(path.scope.getBinding(object.name), []);
+      // }
       const { name } = property;
-      return t.objectTypeProperty(
-        t.stringLiteral(name),
-        generateFlowTypeMap[parent.right?.type]?.(parent, path, option),
-        option?.optional ? t.variance("minus") : null
-      );
+      const tsType = t.tsPropertySignature(t.stringLiteral(name), generateFlowTypeMap.baseTsAstMapsExpression(parent, parent?.right?.type, option, path));
+      tsType.optional = option.optional;
+      return tsType;
     } else if (property.type === "PrivateName") {
     } else {
       // expression 表达式
     }
+  },
+  baseTsAstMapsExpression(node, type, option, path) {
+    return baseTsAstMaps.includes(type)
+      ? t.tsTypeAnnotation(generateFlowTypeMap[type](node, path, option))
+      : generateFlowTypeMap[type](node, path, option);
   },
   // 数组
   ArrayExpression: (
@@ -419,6 +410,7 @@ const baseTsAstMaps: string[] = [
   "UnionTypeAnnotation",
   "BooleanLiteral",
   "NumberLiteral",
+  "NumericLiteral",
   "StringLiteral",
 ];
 
@@ -434,12 +426,10 @@ const curdGenerateTsAstMap = {
   },
   // 基础类型转换成联合类型
   BaseTypeUnionAnnotation: (
-    node: FlowType | FlowType[],
-    value: FlowType | FlowType[]
-  ): UnionFlowType<Node, "UnionTypeAnnotation"> => {
-    return t.unionTypeAnnotation(
-      (Array.isArray(node) ? node : [node]).concat(value)
-    );
+    node: TSType | TSType[],
+    value: TSType | TSType[]
+  ): t.TSUnionType => {
+    return t.tsUnionType((Array.isArray(node) ? node : [node]).concat(value));
   },
 };
 

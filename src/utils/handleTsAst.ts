@@ -1,22 +1,22 @@
 import { curdGenerateTsAstMaps } from "./generateTsAstMaps";
 import handleTsAstMaps from "./handleTsAstMaps";
-import type { Flow, Node } from "@babel/types";
+import type { TSType, TSPropertySignature, TSUnionType, Node } from "@babel/types";
 import { UnionFlowType, SureFlowType } from "../interface";
 import * as t from "@babel/types";
 
 // 当tsAstTypes收集到所有类型后, 开始做预后联合，将重复属性拼凑为联合类型
-const postmathClassMethodTsAst = (tsAstTypes: Flow[]) => {
-  const redundancFlowMap: Map<string, Flow> = new Map();
-  const redundancFlowArray: Flow[] = [];
+const postmathClassMethodTsAst = (tsAstTypes: TSType[]) => {
+  const redundancFlowMap: Map<string, TSPropertySignature> = new Map();
+  const redundancFlowArray: TSPropertySignature[] = [];
 
   tsAstTypes?.forEach((flow) => {
     if (
-      t.isObjectTypeProperty(flow) &&
-      SureFlowType<Flow, UnionFlowType<Flow, "ObjectTypeProperty">>(flow)
+      t.isTSPropertySignature(flow) &&
+      SureFlowType<TSPropertySignature>(flow)
     ) {
-      const { value } = (flow as UnionFlowType<Flow, "ObjectTypeProperty">)
+      const { value } = (flow as TSPropertySignature)
         .key as UnionFlowType<
-        UnionFlowType<Flow, "ObjectTypeProperty">["key"],
+        UnionFlowType<TSType, "TSPropertySignature">["key"],
         "StringLiteral"
       >;
       const memoryFlowType = redundancFlowMap.get(value);
@@ -24,23 +24,20 @@ const postmathClassMethodTsAst = (tsAstTypes: Flow[]) => {
         redundancFlowArray.push(flow);
         redundancFlowMap.set(value, flow);
       } else if (
-        SureFlowType<Flow, UnionFlowType<Flow, "ObjectTypeProperty">>(
+        SureFlowType<TSPropertySignature>(
           memoryFlowType
         )
       ) {
-        if (flow.variance && !memoryFlowType.variance) {
-          memoryFlowType.variance = flow.variance;
+        if ((flow as TSPropertySignature).optional && !memoryFlowType.optional) {
+          memoryFlowType.optional = (flow as TSPropertySignature).optional;
         }
-        memoryFlowType.value = curdGenerateTsAstMaps.BaseTypeUnionAnnotation(
-          t.isUnionTypeAnnotation(memoryFlowType.value)
+        memoryFlowType.typeAnnotation.typeAnnotation = curdGenerateTsAstMaps.BaseTypeUnionAnnotation(
+          t.isTSUnionType(memoryFlowType.typeAnnotation.typeAnnotation)
             ? (
-                memoryFlowType.value as UnionFlowType<
-                  Node,
-                  "UnionTypeAnnotation"
-                >
+                memoryFlowType.typeAnnotation.typeAnnotation as TSUnionType
               ).types
-            : memoryFlowType.value,
-          flow.value
+            : memoryFlowType.typeAnnotation.typeAnnotation,
+          (flow as TSPropertySignature).typeAnnotation.typeAnnotation
         );
       }
     }
@@ -76,10 +73,10 @@ export const handlePath = (referencePath, tsAstTypes) => {
     const restReferencePaths = referencePath.referencePaths?.filter(
       (path) => path.key !== "body" && path.key !== "right"
     );
-    if (returnASTNode.properties) {
-      handleRerencePath(restReferencePaths, returnASTNode.properties);
-      returnASTNode.properties = postmathClassMethodTsAst(
-        returnASTNode.properties
+    if (returnASTNode.members) {
+      handleRerencePath(restReferencePaths, returnASTNode.members);
+      returnASTNode.members = postmathClassMethodTsAst(
+        returnASTNode.members
       );
     }
 

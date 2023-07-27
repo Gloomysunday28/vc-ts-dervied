@@ -45544,8 +45544,8 @@ const t = __webpack_require__(8);
  */
 function typePromiseOrAnnotation(tsTypeAnotation, async) {
     return async
-        ? t.typeAnnotation(t.genericTypeAnnotation(t.identifier("Promise"), t.typeParameterInstantiation(Array.isArray(tsTypeAnotation) ? tsTypeAnotation : [tsTypeAnotation])))
-        : t.typeAnnotation(tsTypeAnotation);
+        ? t.tsTypeAnnotation(t.tsTypeReference(t.identifier("Promise"), t.tsTypeParameterInstantiation(Array.isArray(tsTypeAnotation) ? tsTypeAnotation : [tsTypeAnotation])))
+        : t.tsTypeAnnotation(tsTypeAnotation);
 }
 function default_1() {
     return {
@@ -45677,63 +45677,43 @@ const generateFlowTypeMap = {
     undefined: t.voidTypeAnnotation,
     number: (node) => {
         const { value } = node || {};
-        return value
-            ? t.numberLiteralTypeAnnotation(value)
-            : t.numberTypeAnnotation();
+        return value ? t.tsLiteralType(node) : t.TSNumberKeyword();
     },
     NumericLiteral: (node) => {
         const { value } = node || {};
-        return value
-            ? t.numberLiteralTypeAnnotation(value)
-            : t.numberTypeAnnotation();
+        return value ? t.tsLiteralType(node) : t.TSNumberKeyword();
     },
     TSNumberKeyword: (node) => {
         const { value } = node || {};
-        return value
-            ? t.numberLiteralTypeAnnotation(value)
-            : t.numberTypeAnnotation();
+        return value ? t.tsLiteralType(node) : t.TSNumberKeyword();
     },
     string: (node) => {
         const { value } = node || {};
-        return value
-            ? t.stringLiteralTypeAnnotation(value)
-            : t.stringTypeAnnotation();
+        return value ? t.tsLiteralType(node) : t.TSStringKeyword();
     },
     StringLiteral: (node) => {
         const { value } = node || {};
-        return value
-            ? t.stringLiteralTypeAnnotation(value)
-            : t.stringTypeAnnotation();
+        return value ? t.tsLiteralType(node) : t.TSStringKeyword();
     },
     TemplateLiteral: (node) => {
         const { value } = node || {};
-        return value
-            ? t.stringLiteralTypeAnnotation(value)
-            : t.stringTypeAnnotation();
+        return value ? t.tsLiteralType(node) : t.TSStringKeyword();
     },
     TSStringKeyword: (node) => {
         const { value } = node || {};
-        return value
-            ? t.stringLiteralTypeAnnotation(value)
-            : t.stringTypeAnnotation();
+        return value ? t.tsLiteralType(node) : t.TSStringKeyword();
     },
     boolean: (node) => {
         const { value } = node || {};
-        return value
-            ? t.booleanLiteralTypeAnnotation(value)
-            : t.booleanTypeAnnotation();
+        return value ? t.tsLiteralType(node) : t.TSBooleanKeyword();
     },
     BooleanLiteral: (node) => {
         const { value } = node || {};
-        return value
-            ? t.booleanLiteralTypeAnnotation(value)
-            : t.booleanTypeAnnotation();
+        return value ? t.tsLiteralType(node) : t.TSBooleanKeyword();
     },
     TSBooleanKeyword: (node) => {
         const { value } = node || {};
-        return value
-            ? t.booleanLiteralTypeAnnotation(value)
-            : t.booleanTypeAnnotation();
+        return value ? t.tsLiteralType(node) : t.TSBooleanKeyword();
     },
     ParamterDeclaration: (params) => {
         return t.typeParameterDeclaration(params.map((param) => t.typeParameter(t.typeAnnotation(generateFlowTypeMap[param.typeAnnotation
@@ -45789,12 +45769,15 @@ const generateFlowTypeMap = {
         }
         else {
             const { properties } = node;
-            return t.objectTypeAnnotation(properties.map((propert) => {
+            return t.TSTypeLiteral(properties.map((propert) => {
                 if (propert.key) {
-                    return t.objectTypeProperty(t.stringLiteral((propert.key?.name ||
-                        propert.key)), generateFlowTypeMap[propert.value.type](propert.value, path), option?.optional || t.isOptionalMemberExpression(propert.value)
-                        ? t.variance("minus")
-                        : null);
+                    const tsType = t.tsPropertySignature(t.stringLiteral((propert.key?.name ||
+                        propert.key)), baseTsAstMaps.includes(propert.value.type)
+                        ? t.tsTypeAnnotation(generateFlowTypeMap[propert.value.type](propert.value, path))
+                        : generateFlowTypeMap[propert.value.type](propert.value, path));
+                    tsType.optional =
+                        option?.optional || t.isOptionalMemberExpression(propert.value);
+                    return tsType;
                 }
             }));
         }
@@ -45816,28 +45799,33 @@ const generateFlowTypeMap = {
         const { property, object } = node;
         const { parent } = path;
         if (property.type === "Identifier") {
-            if (object.type === "ArrayExpression") {
-                const { name } = property;
-                let type;
-                try {
-                    type = typeof Array.prototype[name](() => { });
-                }
-                catch (err) { }
-                return type === "object"
-                    ? t.arrayTypeAnnotation(generateFlowTypeMap.NumericLiteral())
-                    : generateFlowTypeMap[type]?.();
-            }
-            else if (object.type === "Identifier") {
-                return handleTsAst_1.default.Identifier(path.scope.getBinding(object.name), []);
-            }
+            // if (object.type === "ArrayExpression") {
+            //   const { name } = property;
+            //   let type;
+            //   try {
+            //     type = typeof Array.prototype[name](() => {});
+            //   } catch (err) {}
+            //   return type === "object"
+            //     ? t.arrayTypeAnnotation(generateFlowTypeMap.NumericLiteral())
+            //     : generateFlowTypeMap[type]?.();
+            // } else if (object.type === "Identifier") {
+            //   return handleTsAst.Identifier(path.scope.getBinding(object.name), []);
+            // }
             const { name } = property;
-            return t.objectTypeProperty(t.stringLiteral(name), generateFlowTypeMap[parent.right?.type]?.(parent, path, option), option?.optional ? t.variance("minus") : null);
+            const tsType = t.tsPropertySignature(t.stringLiteral(name), generateFlowTypeMap.baseTsAstMapsExpression(parent, parent?.right?.type, option, path));
+            tsType.optional = option.optional;
+            return tsType;
         }
         else if (property.type === "PrivateName") {
         }
         else {
             // expression 表达式
         }
+    },
+    baseTsAstMapsExpression(node, type, option, path) {
+        return baseTsAstMaps.includes(type)
+            ? t.tsTypeAnnotation(generateFlowTypeMap[type](node, path, option))
+            : generateFlowTypeMap[type](node, path, option);
     },
     // 数组
     ArrayExpression: (node, path) => {
@@ -45877,6 +45865,7 @@ const baseTsAstMaps = [
     "UnionTypeAnnotation",
     "BooleanLiteral",
     "NumberLiteral",
+    "NumericLiteral",
     "StringLiteral",
 ];
 exports.baseTsAstMaps = baseTsAstMaps;
@@ -45889,7 +45878,7 @@ const curdGenerateTsAstMap = {
     },
     // 基础类型转换成联合类型
     BaseTypeUnionAnnotation: (node, value) => {
-        return t.unionTypeAnnotation((Array.isArray(node) ? node : [node]).concat(value));
+        return t.tsUnionType((Array.isArray(node) ? node : [node]).concat(value));
     },
 };
 exports.generateTsTypeMaps = generateTsTypeMap;
@@ -45914,7 +45903,7 @@ const postmathClassMethodTsAst = (tsAstTypes) => {
     const redundancFlowMap = new Map();
     const redundancFlowArray = [];
     tsAstTypes?.forEach((flow) => {
-        if (t.isObjectTypeProperty(flow) &&
+        if (t.isTSPropertySignature(flow) &&
             (0, interface_1.SureFlowType)(flow)) {
             const { value } = flow
                 .key;
@@ -45924,12 +45913,12 @@ const postmathClassMethodTsAst = (tsAstTypes) => {
                 redundancFlowMap.set(value, flow);
             }
             else if ((0, interface_1.SureFlowType)(memoryFlowType)) {
-                if (flow.variance && !memoryFlowType.variance) {
-                    memoryFlowType.variance = flow.variance;
+                if (flow.optional && !memoryFlowType.optional) {
+                    memoryFlowType.optional = flow.optional;
                 }
-                memoryFlowType.value = generateTsAstMaps_1.curdGenerateTsAstMaps.BaseTypeUnionAnnotation(t.isUnionTypeAnnotation(memoryFlowType.value)
-                    ? memoryFlowType.value.types
-                    : memoryFlowType.value, flow.value);
+                memoryFlowType.typeAnnotation.typeAnnotation = generateTsAstMaps_1.curdGenerateTsAstMaps.BaseTypeUnionAnnotation(t.isTSUnionType(memoryFlowType.typeAnnotation.typeAnnotation)
+                    ? memoryFlowType.typeAnnotation.typeAnnotation.types
+                    : memoryFlowType.typeAnnotation.typeAnnotation, flow.typeAnnotation.typeAnnotation);
             }
         }
     });
@@ -45959,9 +45948,9 @@ const handlePath = (referencePath, tsAstTypes) => {
     if (tsAstTypes.length) {
         const returnASTNode = tsAstTypes[0];
         const restReferencePaths = referencePath.referencePaths?.filter((path) => path.key !== "body" && path.key !== "right");
-        if (returnASTNode.properties) {
-            (0, exports.handleRerencePath)(restReferencePaths, returnASTNode.properties);
-            returnASTNode.properties = postmathClassMethodTsAst(returnASTNode.properties);
+        if (returnASTNode.members) {
+            (0, exports.handleRerencePath)(restReferencePaths, returnASTNode.members);
+            returnASTNode.members = postmathClassMethodTsAst(returnASTNode.members);
         }
         return returnASTNode;
     }
@@ -46029,8 +46018,7 @@ const getNodeProperty = {
             return right;
         }
     },
-    CallExpression() {
-    }
+    CallExpression() { },
 };
 const handleTsAstMaps = {
     Identifier(node, tsAstTypes, path) {
@@ -46055,17 +46043,18 @@ const handleTsAstMaps = {
             const variable = path.parentPath.scope.bindings[property];
             (variable.path.container || [])?.forEach((node) => {
                 const key = node.id?.name;
-                tsAstTypes.push(t.objectTypeProperty(t.stringLiteral(key), generateTsAstMaps_1.generateFlowTypeMaps[node.init.type](node.init, path, {
+                const tsType = t.tsPropertySignature(t.stringLiteral(key), t.tsTypeAnnotation(generateTsAstMaps_1.generateFlowTypeMaps[node.init.type](node.init, path, {
                     optional: t.isBlockStatement(path.scope.block),
                 })));
+                (tsType.optional = t.isBlockStatement(path.scope.block)),
+                    tsAstTypes.push(tsType);
             });
             if (Array.isArray(tsAstTypes)) {
                 const curentTsNode = tsAstTypes.find((tsnode) => tsnode.key.value === property);
                 if (curentTsNode) {
                     curentTsNode.value = generateTsAstMaps_1.curdGenerateTsAstMaps[generateTsAstMaps_1.baseTsAstMaps.includes(curentTsNode?.value?.type)
                         ? "BaseTypeUnionAnnotation"
-                        : curentTsNode.value?.type]?.(curentTsNode.value, (0, handleTsAst_1.handleRerencePath)(variable.referencePaths?.filter((refer) => refer.key !== "right") ||
-                        [], []));
+                        : curentTsNode.value?.type]?.(curentTsNode.value, (0, handleTsAst_1.handleRerencePath)(variable.referencePaths?.filter((refer) => refer.key !== "right") || [], []));
                 }
             }
         }

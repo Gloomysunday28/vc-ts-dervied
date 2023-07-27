@@ -6,10 +6,11 @@ export type KeyofObject<T extends Record<string, any>> = {
 
 // 获取FlowType里的某个类型
 export type UnionFlowType<T extends Node, Key extends Node['type']> = T extends T ? Key extends T['type'] ? T : never : never;
+export type UnionTSType<T extends Node, Key extends Node['type']> = T extends T ? Key extends T['type'] ? T : never : never;
 
 // 判断类型
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export function SureFlowType<T, U extends T>(params: T): params is U {
+export function SureFlowType<T, U extends T = T>(params: T): params is U {
   return !!(params as U)
 }
 

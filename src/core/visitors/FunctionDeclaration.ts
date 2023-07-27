@@ -1,6 +1,6 @@
 import { generateFlowTypeMaps } from "../../utils/generateTsAstMaps";
 import handleTsAst from "../../utils/handleTsAst";
-import { type FlowType, type Node, type TypeAnnotation } from "@babel/types";
+import { type FlowType, type TSType, type Node, type TypeAnnotation } from "@babel/types";
 import bullet from "../render/bullet";
 import * as generate from "@babel/generator";
 import * as vscode from "vscode";
@@ -13,19 +13,19 @@ import * as t from "@babel/types";
  * @returns TypeAnnotation
  */
 function typePromiseOrAnnotation(
-  tsTypeAnotation: FlowType | FlowType[],
+  tsTypeAnotation: TSType | TSType[],
   async: boolean,
-): TypeAnnotation {
+) {
   return async
-    ? t.typeAnnotation(
-      t.genericTypeAnnotation(
+    ? t.tsTypeAnnotation(
+      t.tsTypeReference(
         t.identifier("Promise"),
-        t.typeParameterInstantiation(
+        t.tsTypeParameterInstantiation(
           Array.isArray(tsTypeAnotation) ? tsTypeAnotation : [tsTypeAnotation]
         )
       )
     )
-    : t.typeAnnotation(tsTypeAnotation as FlowType);
+    : t.tsTypeAnnotation(tsTypeAnotation as t.TSType);
 }
 
 export default function () {
