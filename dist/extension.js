@@ -45536,6 +45536,7 @@ const bullet_1 = __webpack_require__(189);
 const generate = __webpack_require__(115);
 const vscode = __webpack_require__(1);
 const t = __webpack_require__(8);
+const generic_1 = __webpack_require__(193);
 /**
  * @description 兼容async await语法的TypeReference
  * @param tsTypeAnotation {FlowType | FlowType[]}
@@ -45549,51 +45550,54 @@ function typePromiseOrAnnotation(tsTypeAnotation, async) {
 }
 function default_1() {
     return {
-        'FunctionDeclaration|ArrowFunctionExpression|ClassMethod': {
+        "FunctionDeclaration|ArrowFunctionExpression|ClassMethod": {
             enter(path) {
                 const tsAstTypes = [];
                 const { body, async, id } = path.node;
-                try {
-                    const returnAstNode = handleTsAst_1.default.ReturnStatement(body);
-                    let typeReference;
-                    const { argument } = returnAstNode || {};
-                    if (t.isIdentifier(argument)) {
-                        const bindScopePath = path.scope.bindings[argument.name];
-                        const returnTypeReference = typePromiseOrAnnotation(handleTsAst_1.default.Identifier(bindScopePath, tsAstTypes), async);
-                        typeReference = {
-                            content: generate.default(returnTypeReference).code,
-                            type: returnTypeReference.typeAnnotation.type,
-                        };
+                const returnAstNode = handleTsAst_1.default.ReturnStatement(body);
+                let typeReference;
+                returnAstNode?.forEach((returnAstNode) => {
+                    try {
+                        const { argument } = returnAstNode || {};
+                        if (t.isIdentifier(argument)) {
+                            const bindScopePath = path.scope.bindings[argument.name];
+                            const returnTypeReference = typePromiseOrAnnotation(handleTsAst_1.default.Identifier(bindScopePath, tsAstTypes), async);
+                            typeReference = {
+                                content: generate.default(returnTypeReference).code,
+                                type: returnTypeReference.typeAnnotation.type,
+                            };
+                        }
+                        else {
+                            const returnTypeReference = typePromiseOrAnnotation(argument?.type
+                                ? generateTsAstMaps_1.generateTsTypeMaps[argument.type]?.(argument, path)
+                                : t.tsVoidKeyword(), async);
+                            typeReference = {
+                                content: generate.default(returnTypeReference).code,
+                                type: returnTypeReference?.typeAnnotation?.type || "unknown",
+                            };
+                        }
+                        if (typeReference) {
+                            const { node } = path;
+                            bullet_1.default.addDecorateBullet({
+                                ...typeReference,
+                                name: generic_1.default.AsyncGeneric(id?.name || path?.parent?.id?.name || "AnonymousReturnType", async),
+                                position: new vscode.Position(node.body.loc.start.line - 1, node.body.loc.start.column),
+                            });
+                        }
+                        path.skip();
                     }
-                    else {
-                        const returnTypeReference = typePromiseOrAnnotation(argument?.type
-                            ? generateTsAstMaps_1.generateFlowTypeMaps[argument.type]?.(argument, path)
-                            : t.voidTypeAnnotation(), async);
-                        typeReference = {
-                            content: generate.default(returnTypeReference).code,
-                            type: returnTypeReference?.typeAnnotation?.type || 'unknown'
-                        };
-                    }
-                    if (typeReference) {
+                    catch (err) {
                         const { node } = path;
                         bullet_1.default.addDecorateBullet({
-                            ...typeReference,
-                            name: id?.name || 'AnonymousReturnType',
+                            content: async ? ": Promise<?>" : ": ?",
+                            type: "?",
+                            name: generic_1.default.AsyncGeneric(id?.name || path?.parent?.id?.name || "AnonymousReturnType", async),
                             position: new vscode.Position(node.body.loc.start.line - 1, node.body.loc.start.column),
                         });
+                        path.skip();
                     }
-                    path.skip();
-                }
-                catch (err) {
-                    const { node } = path;
-                    bullet_1.default.addDecorateBullet({
-                        content: async ? ': Promise<?>' : ': ?',
-                        type: '?',
-                        name: id?.name || 'AnonymousReturnType',
-                        position: new vscode.Position(node.body.loc.start.line - 1, node.body.loc.start.column),
-                    });
-                    path.skip();
-                }
+                });
+                bullet_1.default;
             },
         },
     };
@@ -45610,135 +45614,61 @@ exports["default"] = default_1;
 /* eslint-disable */
 // @ts-nocheck
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.baseTsAstMaps = exports.curdGenerateTsAstMaps = exports.generateFlowTypeMaps = exports.generateTsTypeMaps = void 0;
+exports.baseTsAstMaps = exports.curdGenerateTsAstMaps = exports.generateTsTypeMaps = void 0;
 const handleTsAst_1 = __webpack_require__(185);
 const operator_1 = __webpack_require__(188);
 const t = __webpack_require__(8);
 // TSType与FlowType都可以作为类型
 // js类型与Ts type的影射关系
-const generateTsTypeMap = {
-    TSNumberKeyword: t.tsNumberKeyword,
-    TSStringKeyword: t.tsStringKeyword,
-    TSBooleanKeyword: t.tsBooleanKeyword,
-    NumericLiteral: t.tsNumberKeyword,
-    StringLiteral: t.tsStringKeyword,
-    BooleanLiteral: t.tsBooleanKeyword,
-    TsTypeParameterDeclaration: (params) => {
-        return t.tsTypeParameterDeclaration(params.map((param) => {
-            const type = param.typeAnnotation.typeAnnotation?.type;
-            return type
-                ? t.tsTypeParameter(
-                // @ts-ignore
-                t[(type.slice(0, 2).toLowerCase() + type.slice(2))]?.(), null, param.name)
-                : null;
-        }));
-    },
-    ObjectExpression: (node, path) => {
-        if (Array.isArray(node)) {
-            return node[0];
-        }
-        else {
-            const { init: { properties }, id: key, } = node;
-            return t.tsParenthesizedType(t.tsTypeLiteral(properties.map((propert) => {
-                if (propert.key) {
-                    return t.tsPropertySignature(key, t.tsTypeAnnotation(generateTsTypeMap[propert.value.type](node, path)), key);
-                }
-            })));
-        }
-    },
-    // MemberExpression: (
-    //   node: UnionFlowType<Node, "MemberExpression">,
-    //   path: any,
-    //   option?: GenerateTsAstMapsOption
-    // ) => {
-    //   const { property, object } = node;
-    //   const { parent } = path;
-    //   if (property.type === "Identifier") {
-    //     return t.tsPropertySignature(
-    //       property,
-    //       t.tsTypeAnnotation(
-    //         generateTsTypeMap[parent.right.type](parent, path, option) as TSType
-    //       ),
-    //       property
-    //     );
-    //   } else if (property.type === "PrivateName") {
-    //   } else {
-    //     // expression 表达式
-    //   }
-    // },
-    // ArrowFunctionExpression: (
-    //   node: UnionFlowType<Flow, "ArrowFunctionExpression">,
-    //   path,
-    //   { tsTypes }: GenerateTsAstMapsOption
-    // ) => {
-    //   const { params = [] } = node;
-    //   const paramsType = generateTsTypeMap.TsTypeParameterDeclaration(params);
-    //   return t.tsFunctionType(
-    //     paramsType,
-    //     params.map((param) => t.identifier(param.name)),
-    //     handleTsAst.Identifier(path, tsTypes)
-    //   );
-    // },
-};
 //  js类型与Flow ast映射关系 只针对该类型生成TSType
-const generateFlowTypeMap = {
+const generateTsTypeMap = {
     undefined: t.voidTypeAnnotation,
     number: (node) => {
-        const { value } = node || {};
-        return value ? t.tsLiteralType(node) : t.TSNumberKeyword();
+        return node ? t.tsLiteralType(node) : t.TSNumberKeyword();
     },
     NumericLiteral: (node) => {
-        const { value } = node || {};
-        return value ? t.tsLiteralType(node) : t.TSNumberKeyword();
+        return node ? t.tsLiteralType(node) : t.TSNumberKeyword();
     },
     TSNumberKeyword: (node) => {
-        const { value } = node || {};
-        return value ? t.tsLiteralType(node) : t.TSNumberKeyword();
+        return node ? t.tsLiteralType(node) : t.TSNumberKeyword();
     },
     string: (node) => {
-        const { value } = node || {};
-        return value ? t.tsLiteralType(node) : t.TSStringKeyword();
+        return node ? t.tsLiteralType(node) : t.TSStringKeyword();
     },
     StringLiteral: (node) => {
-        const { value } = node || {};
-        return value ? t.tsLiteralType(node) : t.TSStringKeyword();
+        return node ? t.tsLiteralType(node) : t.TSStringKeyword();
     },
     TemplateLiteral: (node) => {
-        const { value } = node || {};
-        return value ? t.tsLiteralType(node) : t.TSStringKeyword();
+        return node ? t.tsLiteralType(node) : t.TSStringKeyword();
     },
     TSStringKeyword: (node) => {
-        const { value } = node || {};
-        return value ? t.tsLiteralType(node) : t.TSStringKeyword();
+        return node ? t.tsLiteralType(node) : t.TSStringKeyword();
     },
     boolean: (node) => {
-        const { value } = node || {};
-        return value ? t.tsLiteralType(node) : t.TSBooleanKeyword();
+        return node ? t.tsLiteralType(node) : t.TSBooleanKeyword();
     },
     BooleanLiteral: (node) => {
-        const { value } = node || {};
-        return value ? t.tsLiteralType(node) : t.TSBooleanKeyword();
+        return node ? t.tsLiteralType(node) : t.TSBooleanKeyword();
     },
     TSBooleanKeyword: (node) => {
-        const { value } = node || {};
-        return value ? t.tsLiteralType(node) : t.TSBooleanKeyword();
+        return node ? t.tsLiteralType(node) : t.TSBooleanKeyword();
     },
     ParamterDeclaration: (params) => {
-        return t.typeParameterDeclaration(params.map((param) => t.typeParameter(t.typeAnnotation(generateFlowTypeMap[param.typeAnnotation
+        return t.typeParameterDeclaration(params.map((param) => t.typeParameter(t.typeAnnotation(generateTsTypeMap[param.typeAnnotation
             .typeAnnotation?.type]?.()))));
     },
     FunctionTypeParam: (params) => {
-        return params?.map((param) => t.functionTypeParam(t.identifier(param.name), generateFlowTypeMap[param.typeAnnotation
+        return params?.map((param) => t.functionTypeParam(t.identifier(param.name), generateTsTypeMap[param.typeAnnotation
             .typeAnnotation?.type]?.()));
     },
     FunctionExpression: (node, path, options) => {
         const { params } = node;
-        const paramsType = generateFlowTypeMap.ParamterDeclaration(params);
-        const functionParams = generateFlowTypeMap.FunctionTypeParam(params);
+        const paramsType = generateTsTypeMap.ParamterDeclaration(params);
+        const functionParams = generateTsTypeMap.FunctionTypeParam(params);
         const restParams = null;
-        return t.functionTypeAnnotation(paramsType, functionParams, restParams, options.returnType
-            ? generateFlowTypeMap[options.returnType.type](options.returnType)
-            : t.anyTypeAnnotation());
+        return t.tsDeclareFunction(paramsType, functionParams, restParams, options.returnType
+            ? generateTsTypeMap[options.returnType.type](options.returnType)
+            : t.tsAnyKeyword());
     },
     VariableDeclarator: (node, path, option) => {
         const { init } = node;
@@ -45747,24 +45677,29 @@ const generateFlowTypeMap = {
     NewExpression(node, path) {
         const { callee, arguments: bodyState } = node;
         const [argument] = bodyState;
-        let returnType;
+        let returnType = t.tsUnknownKeyword(), paramsType;
         if (argument &&
             (t.isFunctionExpression(argument) ||
-                t.isArrowFunctionExpression(argument)) &&
-            (argument.params || []).length) {
-            const { body } = argument;
+                t.isArrowFunctionExpression(argument))) {
+            const { body, params } = argument;
+            paramsType = generateTsTypeMap.TsTypeParameterDeclaration(params || []);
             const returnStatement = (body.body || []).find((param) => t.isReturnStatement(param));
+            if (callee.name === "Promise") {
+                const promiseStatusfn = argument.body?.body?.find((promiseStatus) => t.isExpressionStatement(promiseStatus) &&
+                    t.isCallExpression(promiseStatus?.expression) &&
+                    argument.params?.some((param) => param.name === promiseStatus.expression.callee.name));
+                const promiseArgument = promiseStatusfn?.expression?.arguments?.[0];
+                if (promiseArgument) {
+                    returnType = generateTsTypeMap[promiseArgument.type](promiseArgument);
+                }
+            }
             if (returnStatement && t.isCallExpression(returnStatement.argument)) {
                 const { argument } = returnStatement;
                 returnType = argument?.arguments?.[0];
             }
         }
-        return t.objectTypeAnnotation([
-            t.objectTypeProperty(t.stringLiteral(`new ${callee.name}`), generateFlowTypeMap.FunctionExpression({
-                params: [],
-            }, path, {
-                returnType,
-            })),
+        return t.tsTypeLiteral([
+            t.tsConstructSignatureDeclaration(paramsType, [t.identifier(callee.name)], t.tsTypeAnnotation(returnType)),
         ]);
     },
     OptionalMemberExpression(node, path) {
@@ -45780,7 +45715,7 @@ const generateFlowTypeMap = {
             return t.TSTypeLiteral(properties.map((propert) => {
                 if (propert.key) {
                     const tsType = t.tsPropertySignature(t.stringLiteral((propert.key?.name ||
-                        propert.key)), t.tsTypeAnnotation(generateFlowTypeMap[propert.value.type](propert.value, path)));
+                        propert.key)), t.tsTypeAnnotation(generateTsTypeMap[propert.value.type](propert.value, path)));
                     tsType.optional =
                         option?.optional || t.isOptionalMemberExpression(propert.value);
                     return tsType;
@@ -45791,34 +45726,31 @@ const generateFlowTypeMap = {
     ArrowFunctionExpression: (node, path) => {
         const { params = [], body } = node;
         const paramsType = generateTsTypeMap.TsTypeParameterDeclaration(params);
-        return t.tsFunctionType(paramsType, params.map((param) => t.identifier(param.name)), t.tsTypeAnnotation(t.isIdentifier(body) ? handleTsAst_1.default.Identifier(path.scope.getBinding(body.name), []) : exports.generateFlowTypeMaps[body.type](body, path)));
+        return t.tsFunctionType(paramsType, params.map((param) => t.identifier(param.name)), t.tsTypeAnnotation(t.isIdentifier(body)
+            ? handleTsAst_1.default.Identifier(path.scope.getBinding(body.name), [])
+            : exports.generateTsTypeMaps[body.type](body, path)));
     },
-    // 箭头函数
-    // ArrowFunctionExpression: (
-    //   node: UnionFlowType<Node, "ArrowFunctionExpression">,
-    //   path: any
-    // ) => {
-    //   const { body } = node;
-    //   if (t.isIdentifier(body)) {
-    //     const { name } = body as UnionFlowType<Node, "Identifier">;
-    //     const bindScopePath = path.scope.bindings[name];
-    //     return t.functionTypeAnnotation(
-    //       null,
-    //       [],
-    //       null,
-    //       handlePath(bindScopePath, [])
-    //     );
-    //   } else if (generateFlowTypeMap[body.type]) {
-    //     return generateFlowTypeMap[body.type](body, path);
-    //   }
-    // },
+    // 参数类型
+    TsTypeParameterDeclaration: (params) => {
+        return t.tsTypeParameterDeclaration(params.map((param) => {
+            const type = param?.typeAnnotation?.typeAnnotation;
+            return t.tsTypeParameter(type || t.tsUnknownKeyword(), null, param.name);
+        }));
+    },
     // 对象属性
     MemberExpression: (node, path, option) => {
         const { property, object } = node;
         const { parent } = path;
-        if (property.type === "Identifier") {
+        if (t.isIdentifier(object)) {
+            const identifierPath = path.scope.getBinding(object.name).identifier;
+            const typeAnnotation = identifierPath.typeAnnotation?.typeAnnotation;
+            if (typeAnnotation) {
+                return typeAnnotation;
+            }
+        }
+        if (t.isIdentifier(property)) {
             const { name } = property;
-            const tsType = t.tsPropertySignature(t.stringLiteral(name), generateFlowTypeMap.baseTsAstMapsExpression(parent, parent?.right?.type, option, path));
+            const tsType = t.tsPropertySignature(t.stringLiteral(name), t.tsTypeAnnotation(generateTsTypeMap[parent?.right?.type](parent.right, path, option)));
             tsType.optional = option.optional;
             return tsType;
         }
@@ -45830,8 +45762,8 @@ const generateFlowTypeMap = {
     },
     baseTsAstMapsExpression(node, type, option, path) {
         return baseTsAstMaps.includes(type)
-            ? t.tsTypeAnnotation(generateFlowTypeMap[type](node, path, option))
-            : generateFlowTypeMap[type](node, path, option);
+            ? t.tsTypeAnnotation(generateTsTypeMap[type](node, path, option))
+            : generateTsTypeMap[type](node, path, option);
     },
     // 数组
     ArrayExpression: (node, path) => {
@@ -45842,37 +45774,41 @@ const generateFlowTypeMap = {
                     const bindScopePath = path.scope.bindings[ele.name];
                     return handleTsAst_1.default.Identifier(bindScopePath, []);
                 }
-                return generateFlowTypeMap[ele.type](ele, path);
+                return generateTsTypeMap[ele.type](ele, path);
             }));
         }
         return null;
     },
     BinaryExpression(node) {
         const referenceType = operator_1.default.operatorType(node.operator);
-        return generateFlowTypeMap[referenceType]?.();
+        return generateTsTypeMap[referenceType]?.();
     },
     LogicalExpression(node) {
         const referenceType = operator_1.default.operatorType(node.operator);
         return referenceType;
     },
     Identifier(node, path) {
+        const isBaseIdentifier = baseTsAstMaps.find(baseTSType => baseTSType.startsWith(node.name));
+        if (isBaseIdentifier) {
+            return generateTsTypeMap[isBaseIdentifier]();
+        }
         return handleTsAst_1.default.Identifier(path.scope.getBinding(node.name), []);
     },
     CallExpression(node, path) {
         const { callee } = node;
-        return generateFlowTypeMap[callee.type](callee, path);
+        return generateTsTypeMap[callee.type]?.(callee, path);
     },
 };
 // 联合类型
 const baseTsAstMaps = [
-    "NumberTypeAnnotation",
-    "StringTypeAnnotation",
-    "BooleanTypeAnnotation",
-    "UnionTypeAnnotation",
     "BooleanLiteral",
     "NumberLiteral",
     "NumericLiteral",
     "StringLiteral",
+    "NumberTypeAnnotation",
+    "StringTypeAnnotation",
+    "BooleanTypeAnnotation",
+    "UnionTypeAnnotation",
 ];
 exports.baseTsAstMaps = baseTsAstMaps;
 // 对既有TSAst数据进行操作
@@ -45888,7 +45824,6 @@ const curdGenerateTsAstMap = {
     },
 };
 exports.generateTsTypeMaps = generateTsTypeMap;
-exports.generateFlowTypeMaps = generateFlowTypeMap;
 exports.curdGenerateTsAstMaps = curdGenerateTsAstMap;
 
 
@@ -45974,29 +45909,30 @@ exports["default"] = {
      * @description 获取ReturnStatement
      * @param node Node
      */
-    ReturnStatement(node) {
+    ReturnStatement(node, returnBullet = []) {
         const { body } = node;
         let returnStatement;
         if ((returnStatement = body?.find((node) => t.isReturnStatement(node)))) {
-            return returnStatement;
+            returnBullet.push(returnStatement);
         }
         const TryStatement = body?.find((node) => t.isTryStatement(node));
         if (TryStatement) {
             if (returnStatement = this.ReturnStatement(TryStatement.block)) {
-                return returnStatement;
+                returnBullet = returnBullet.concat(returnStatement);
             }
         }
         const IfStatement = body?.find((node) => t.isIfStatement(node));
         if (IfStatement) {
-            let { alternate, consequent } = IfStatement;
+            let { alternate } = IfStatement;
             let ifStatementBodyNoode;
             while ((alternate = alternate?.alternate, alternate)) {
                 ifStatementBodyNoode = alternate;
             }
-            if (returnStatement = this.ReturnStatement(ifStatementBodyNoode)) {
-                return returnStatement;
+            if (ifStatementBodyNoode && (returnStatement = this.ReturnStatement(ifStatementBodyNoode))) {
+                returnBullet = returnBullet.concat(returnStatement);
             }
         }
+        return returnBullet;
     },
 };
 
@@ -46038,8 +45974,8 @@ const handleTsAstMaps = {
     },
     VariableDeclarator: (node, tsAstTypes, path) => {
         const { init } = node;
-        if (generateTsAstMaps_1.generateFlowTypeMaps[init.type]) {
-            tsAstTypes.push(generateTsAstMaps_1.generateFlowTypeMaps[init.type](init, path));
+        if (generateTsAstMaps_1.generateTsTypeMaps[init.type]) {
+            tsAstTypes.push(generateTsAstMaps_1.generateTsTypeMaps[init.type](init, path));
         }
     },
     MemberExpression: (containerNode, tsAstTypes, path) => {
@@ -46049,7 +45985,7 @@ const handleTsAstMaps = {
             const variable = path.parentPath.scope.bindings[property];
             (variable.path.container || [])?.forEach((node) => {
                 const key = node.id?.name;
-                const tsType = t.tsPropertySignature(t.stringLiteral(key), t.tsTypeAnnotation(generateTsAstMaps_1.generateFlowTypeMaps[node.init.type](node.init, path, {
+                const tsType = t.tsPropertySignature(t.stringLiteral(key), t.tsTypeAnnotation(generateTsAstMaps_1.generateTsTypeMaps[node.init.type](node.init, path, {
                     optional: t.isBlockStatement(path.scope.block),
                 })));
                 (tsType.optional = t.isBlockStatement(path.scope.block)),
@@ -46066,7 +46002,7 @@ const handleTsAstMaps = {
         }
         else {
             const { parentPath } = path;
-            tsAstTypes.push(generateTsAstMaps_1.generateFlowTypeMaps[parentPath.type](parentPath.node, parentPath, {
+            tsAstTypes.push(generateTsAstMaps_1.generateTsTypeMaps[parentPath.type](parentPath.node, parentPath, {
                 optional: t.isBlockStatement(parentPath.scope.block),
             }));
         }
@@ -46140,7 +46076,7 @@ class Bullet {
         const { content } = bullet;
         const length = content?.match(/(\n)/g)?.length;
         if (length) {
-            const genericName = `${string_1.default.uppcase(bullet.name)}ReturnType`;
+            const genericName = `${string_1.default.uppcase(bullet.name)}`;
             bullet.hoverMessage = new vscode.MarkdownString('类型详细情况如下 \n', true);
             bullet.hoverMessage.supportHtml = true;
             bullet.hoverMessage.isTrusted = true;
@@ -46148,7 +46084,7 @@ class Bullet {
                 prefix: `interface ${genericName} ${string_1.default.filterStr(bullet.type, '{', '', '\n')}`,
                 reg: /\n/g,
                 replacePrefix: '\n',
-                format: "\t".repeat(bullet.type === 'ObjectTypeAnnotation' ? 0 : 1),
+                format: "\t".repeat(bullet.type === 'TSTypeLiteral' ? 0 : 1),
                 postfix: `\n${string_1.default.filterStr(bullet.type, `}`)}${author_1.default}`,
             }));
             bullet.content = string_1.default.padStart(genericName, ': ');
@@ -46234,7 +46170,7 @@ exports["default"] = {
         return `${str}${post || ''}`;
     },
     filterStr(type, filterStr, prefix, postfix) {
-        if (type === 'ObjectTypeAnnotation') {
+        if (type === 'ObjectTypeAnnotation' || type === 'TSTypeLiteral') {
             return '';
         }
         return this.padEnd(this.padStart(filterStr, prefix), postfix);
@@ -46256,6 +46192,21 @@ exports["default"] = `
 "Plugin's Author is: Cai"
 "Contact phone: github.com"
 `;
+
+
+/***/ }),
+/* 193 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const string_1 = __webpack_require__(191);
+exports["default"] = {
+    AsyncGeneric(generic, async) {
+        return `${async ? 'Promise<' : ''}${string_1.default.uppcase(generic)}${async ? '>' : ''}`;
+    }
+};
 
 
 /***/ })

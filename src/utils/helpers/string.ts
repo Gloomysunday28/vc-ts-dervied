@@ -1,4 +1,4 @@
-import type { UppcaseCame } from '../interface';
+import type { UppcaseCame } from '../../interface';
 
 export default {
   uppcase<T extends string>(str: T) {
@@ -11,7 +11,7 @@ export default {
     return `${str}${post || ''}`;
   },
   filterStr(type: string, filterStr: string, prefix?: string, postfix?: string): string {
-    if (type === 'ObjectTypeAnnotation') {
+    if (type === 'ObjectTypeAnnotation' || type === 'TSTypeLiteral') {
       return '';
     }
     return this.padEnd(this.padStart(filterStr, prefix), postfix);

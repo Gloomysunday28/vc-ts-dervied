@@ -2,7 +2,7 @@ import type { BulletDto } from "../../interface/vscode";
 import type { TextEditorDecorationType } from "vscode";
 import * as vscode from "vscode";
 import format from "./format";
-import strUtils from '../../utils/string';
+import strUtils from '../../utils/helpers/string';
 import author from "../template/author";
 
 class Bullet {
@@ -21,7 +21,7 @@ class Bullet {
     const { content } = bullet;
     const length = content?.match(/(\n)/g)?.length;
     if (length) {
-      const genericName = `${strUtils.uppcase(bullet.name)}ReturnType`;
+      const genericName = `${strUtils.uppcase(bullet.name)}`;
       bullet.hoverMessage = new vscode.MarkdownString(
         '类型详细情况如下 \n',
         true
@@ -33,7 +33,7 @@ class Bullet {
           prefix: `interface ${genericName} ${strUtils.filterStr(bullet.type, '{', '', '\n')}`,
           reg: /\n/g,
           replacePrefix: '\n',
-          format: "\t".repeat(bullet.type === 'ObjectTypeAnnotation' ? 0 : 1),
+          format: "\t".repeat(bullet.type === 'TSTypeLiteral' ? 0 : 1),
           postfix: `\n${strUtils.filterStr(bullet.type, `}`)}${author}`,
         })
       );

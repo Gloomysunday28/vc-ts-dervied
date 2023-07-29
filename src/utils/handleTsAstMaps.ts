@@ -1,7 +1,7 @@
 /* eslint-disable */
 
 import {
-  generateFlowTypeMaps,
+  generateTsTypeMaps,
   curdGenerateTsAstMaps,
   baseTsAstMaps,
 } from "./generateTsAstMaps";
@@ -57,8 +57,8 @@ const handleTsAstMaps = {
   ) => {
     const { init } = node;
 
-    if (generateFlowTypeMaps[init.type]) {
-      tsAstTypes.push(generateFlowTypeMaps[init.type](init, path));
+    if (generateTsTypeMaps[init.type]) {
+      tsAstTypes.push(generateTsTypeMaps[init.type](init, path));
     }
   },
   MemberExpression: (containerNode, tsAstTypes, path) => {
@@ -75,7 +75,7 @@ const handleTsAstMaps = {
         const key = node.id?.name;
         const tsType = t.tsPropertySignature(
           t.stringLiteral(key),
-          t.tsTypeAnnotation(generateFlowTypeMaps[node.init.type](node.init, path, {
+          t.tsTypeAnnotation(generateTsTypeMaps[node.init.type](node.init, path, {
             optional: t.isBlockStatement(path.scope.block),
           }))
         );
@@ -107,7 +107,7 @@ const handleTsAstMaps = {
     } else {
       const { parentPath } = path;
       tsAstTypes.push(
-        generateFlowTypeMaps[parentPath.type](parentPath.node, parentPath, {
+        generateTsTypeMaps[parentPath.type](parentPath.node, parentPath, {
           optional: t.isBlockStatement(parentPath.scope.block),
         })
       );

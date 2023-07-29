@@ -95,7 +95,7 @@ export default {
    * @description 获取ReturnStatement
    * @param node Node
    */
-  ReturnStatement(node: t.FunctionDeclaration['body']) {
+  ReturnStatement(node: t.FunctionDeclaration['body'], returnBullet = []) {
     const { body } = node;
     let returnStatement: Node;
     if (
@@ -103,26 +103,28 @@ export default {
         t.isReturnStatement(node)
       ))
     ) {
-      return returnStatement as t.ReturnStatement; 
+      returnBullet.push(returnStatement as t.ReturnStatement); 
     }
 
     const TryStatement = body?.find((node: Node) => t.isTryStatement(node)) as t.TryStatement;
     if (TryStatement) {
       if (returnStatement = this.ReturnStatement(TryStatement.block)) {
-        return returnStatement  as t.ReturnStatement;
+        returnBullet = returnBullet.concat(returnStatement  as t.ReturnStatement);
       }
     }
 
     const IfStatement = body?.find((node: Node) => t.isIfStatement(node)) as t.IfStatement;
     if (IfStatement) {
-      let { alternate, consequent } = IfStatement;
+      let { alternate } = IfStatement;
       let ifStatementBodyNoode;
       while ((alternate = (alternate as any)?.alternate, alternate)) {
         ifStatementBodyNoode = alternate;
       }
-      if (returnStatement = this.ReturnStatement(ifStatementBodyNoode)) {
-        return returnStatement  as t.ReturnStatement;
+      if (ifStatementBodyNoode && (returnStatement = this.ReturnStatement(ifStatementBodyNoode))) {
+        returnBullet = returnBullet.concat(returnStatement  as t.ReturnStatement);
       }
     }
+
+    return returnBullet;
   },
 };

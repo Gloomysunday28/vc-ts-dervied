@@ -7,11 +7,11 @@ export default {
   expressionOperator: ['||', '&&', '??'],
   operatorType(operator: BinaryExpression['operator'] | LogicalExpression['operator']) {
     if (this.numberOperator.includes(operator)) {
-      return 'NumericLiteral'
+      return 'NumericLiteral';
     } else if (this.booleanOperator.includes(operator)) {
-      return 'BooleanLiteral'
+      return 'BooleanLiteral';
     } else if (this.expressionOperator.includes(operator)) {
-      return t.anyTypeAnnotation()
+      return t.anyTypeAnnotation();
     }
   }
-}
+};
