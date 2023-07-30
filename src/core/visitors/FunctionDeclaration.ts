@@ -18,56 +18,55 @@ import { unionUtils } from "../../utils/helpers/union";
  * @param async boolean
  * @returns TypeAnnotation
  */
+interface TsTypeAnnotationTypePromiseOrAnnotation {
+  typeAnnotation: TSType | TSType[];
+  isMaxSizeee: boolean
+}
 function typePromiseOrAnnotation(
-  tsTypeAnotation: TSType | TSType[],
+  tsTypeAnotation: TsTypeAnnotationTypePromiseOrAnnotation,
   async: boolean
 ) {
+  let annotation
   if (Array.isArray(tsTypeAnotation)) {
-    if (globalThis.maxSizeName) {
-      tsTypeAnotation = tsTypeAnotation.map((anotation) => {
-        // @ts-ignore
+    annotation = tsTypeAnotation.map(anotation => {
+      if (anotation.isMaxSizeee) {
         if (anotation.type === 'TSUnionType') {
           // @ts-ignore
-          (anotation as t.TSUnionType).types = (anotation as t.TSUnionType).types.filter(type =>  type.type !== 'TSUnionType')
-          return anotation
-        } else {
-          if (t.isTSTypeAnnotation(anotation)) {
-            return (anotation as t.TSTypeAnnotation).typeAnnotation
-          } else {
-            return anotation
-          }
+          (anotation as t.TSUnionType).typeAnnotation.types = (anotation as t.TSUnionType).typeAnnotation?.types.filter(type =>  type.type !== 'TSUnionType')
+          return anotation.typeAnnotation
         }
-      })
-    } else {
-      tsTypeAnotation = tsTypeAnotation.map(anotation => {
-        if (t.isTSTypeAnnotation(anotation)) {
-          return (anotation as t.TSTypeAnnotation).typeAnnotation
+      } else {
+        if (t.isTSTypeAnnotation(anotation.typeAnnotation)) {
+          return (anotation.typeAnnotation as t.TSTypeAnnotation).typeAnnotation
         } else {
-          return anotation
+          return anotation.typeAnnotation
         }
-      })
-    }
-  } else  {
-    if (globalThis.maxSizeName) {
-      // @ts-ignore
-      if (tsTypeAnotation.type === 'TSUnionType') {
-        // @ts-ignore
-        (tsTypeAnotation as t.TSUnionType).types = (tsTypeAnotation as t.TSUnionType).types.filter(type => type.type !== 'TSUnionType')
       }
-    } else if (t.isTSTypeAnnotation(tsTypeAnotation)) {
-      tsTypeAnotation = (tsTypeAnotation as t.TSTypeAnnotation).typeAnnotation
+    })
+  } else  {
+    annotation = tsTypeAnotation.typeAnnotation
+    if (tsTypeAnotation.isMaxSizeee) {
+      // @ts-ignore
+      if (annotation.type === 'TSUnionType') {
+        // @ts-ignore
+        (annotation as t.TSUnionType).types = (annotation as t.TSUnionType).types.filter(type => type.type !== 'TSUnionType')
+      }
+      // @ts-ignore
+    } else if (t.isTSTypeAnnotation(tsTypeAnotation.typeAnnotation)) {
+      annotation = (tsTypeAnotation.typeAnnotation as t.TSTypeAnnotation).typeAnnotation
     }
   }
+
   return async
     ? t.tsTypeAnnotation(
       t.tsTypeReference(
         t.identifier("Promise"),
         t.tsTypeParameterInstantiation(
-          Array.isArray(tsTypeAnotation) ? tsTypeAnotation : [tsTypeAnotation]
+          Array.isArray(annotation) ? annotation : [annotation]
         )
       )
     )
-    : t.tsTypeAnnotation(tsTypeAnotation as t.TSType);
+    : t.tsTypeAnnotation(annotation as t.TSType);
 }
 
 const FunctionDeclaration = 'FunctionDeclaration|ArrowFunctionExpression|ClassMethod'
@@ -90,9 +89,14 @@ function traverseFunctionDeclartion(path) {
           })
 
           const typeReference = {
-            content: returnTypeReference,
+            content: {
+             typeAnnotation: returnTypeReference,
+             isMaxSizeee: globalThis.isMaxSizeee === bindScopePath?.identifier?.name
+            },
             type: returnTypeReference?.typeAnnotation?.type || "unknown",
           }
+
+          globalThis.isMaxSizeee = ''
           return typeReference
         } else {
           const returnTypeReference = argument?.type
@@ -100,10 +104,12 @@ function traverseFunctionDeclartion(path) {
             : t.tsVoidKeyword()
 
           const typeReference = {
-            content: returnTypeReference,
+            content: {
+              typeAnnotation: returnTypeReference,
+            },
             type: returnTypeReference?.typeAnnotation?.type || "unknown",
           };
-
+ 
           path.skip();
           return typeReference
         }

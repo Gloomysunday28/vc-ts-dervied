@@ -6,7 +6,10 @@ export const unionUtils = {
       if (tsyTypes.length === 1) {
         return tsyTypes[0]
       } else {
-        return t.tsUnionType(tsyTypes.map(params => t.isTSTypeAnnotation(params) ? params.typeAnnotation : params))
+        return {
+          typeAnnotation: t.tsUnionType(tsyTypes.map(params => t.isTSTypeAnnotation(params.typeAnnotation) ? params.typeAnnotation.typeAnnotation : params.typeAnnotation)),
+          isMaxSizeee: tsyTypes.find(t => t.isMaxSizeee)
+        }
       }
     }
   }

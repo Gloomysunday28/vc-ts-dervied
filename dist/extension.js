@@ -45539,58 +45539,44 @@ const t = __webpack_require__(8);
 const generic_1 = __webpack_require__(192);
 const unknown_1 = __webpack_require__(193);
 const union_1 = __webpack_require__(197);
-/**
- * @description 兼容async await语法的TypeReference
- * @param tsTypeAnotation {TsType | TsType[]}
- * @param async boolean
- * @returns TypeAnnotation
- */
 function typePromiseOrAnnotation(tsTypeAnotation, async) {
+    let annotation;
     if (Array.isArray(tsTypeAnotation)) {
-        if (globalThis.maxSizeName) {
-            tsTypeAnotation = tsTypeAnotation.map((anotation) => {
-                // @ts-ignore
+        annotation = tsTypeAnotation.map(anotation => {
+            if (anotation.isMaxSizeee) {
                 if (anotation.type === 'TSUnionType') {
                     // @ts-ignore
-                    anotation.types = anotation.types.filter(type => type.type !== 'TSUnionType');
-                    return anotation;
-                }
-                else {
-                    if (t.isTSTypeAnnotation(anotation)) {
-                        return anotation.typeAnnotation;
-                    }
-                    else {
-                        return anotation;
-                    }
-                }
-            });
-        }
-        else {
-            tsTypeAnotation = tsTypeAnotation.map(anotation => {
-                if (t.isTSTypeAnnotation(anotation)) {
+                    anotation.typeAnnotation.types = anotation.typeAnnotation?.types.filter(type => type.type !== 'TSUnionType');
                     return anotation.typeAnnotation;
                 }
-                else {
-                    return anotation;
+            }
+            else {
+                if (t.isTSTypeAnnotation(anotation.typeAnnotation)) {
+                    return anotation.typeAnnotation.typeAnnotation;
                 }
-            });
-        }
+                else {
+                    return anotation.typeAnnotation;
+                }
+            }
+        });
     }
     else {
-        if (globalThis.maxSizeName) {
+        annotation = tsTypeAnotation.typeAnnotation;
+        if (tsTypeAnotation.isMaxSizeee) {
             // @ts-ignore
-            if (tsTypeAnotation.type === 'TSUnionType') {
+            if (annotation.type === 'TSUnionType') {
                 // @ts-ignore
-                tsTypeAnotation.types = tsTypeAnotation.types.filter(type => type.type !== 'TSUnionType');
+                annotation.types = annotation.types.filter(type => type.type !== 'TSUnionType');
             }
+            // @ts-ignore
         }
-        else if (t.isTSTypeAnnotation(tsTypeAnotation)) {
-            tsTypeAnotation = tsTypeAnotation.typeAnnotation;
+        else if (t.isTSTypeAnnotation(tsTypeAnotation.typeAnnotation)) {
+            annotation = tsTypeAnotation.typeAnnotation.typeAnnotation;
         }
     }
     return async
-        ? t.tsTypeAnnotation(t.tsTypeReference(t.identifier("Promise"), t.tsTypeParameterInstantiation(Array.isArray(tsTypeAnotation) ? tsTypeAnotation : [tsTypeAnotation])))
-        : t.tsTypeAnnotation(tsTypeAnotation);
+        ? t.tsTypeAnnotation(t.tsTypeReference(t.identifier("Promise"), t.tsTypeParameterInstantiation(Array.isArray(annotation) ? annotation : [annotation])))
+        : t.tsTypeAnnotation(annotation);
 }
 const FunctionDeclaration = 'FunctionDeclaration|ArrowFunctionExpression|ClassMethod';
 function traverseFunctionDeclartion(path) {
@@ -45609,9 +45595,13 @@ function traverseFunctionDeclartion(path) {
                         isReturnStatement: true
                     });
                     const typeReference = {
-                        content: returnTypeReference,
+                        content: {
+                            typeAnnotation: returnTypeReference,
+                            isMaxSizeee: globalThis.isMaxSizeee === bindScopePath?.identifier?.name
+                        },
                         type: returnTypeReference?.typeAnnotation?.type || "unknown",
                     };
+                    globalThis.isMaxSizeee = '';
                     return typeReference;
                 }
                 else {
@@ -45619,7 +45609,9 @@ function traverseFunctionDeclartion(path) {
                         ? generateTsAstMaps_1.generateTsTypeMaps[argument.type]?.(argument, path)
                         : t.tsVoidKeyword();
                     const typeReference = {
-                        content: returnTypeReference,
+                        content: {
+                            typeAnnotation: returnTypeReference,
+                        },
                         type: returnTypeReference?.typeAnnotation?.type || "unknown",
                     };
                     path.skip();
@@ -46036,7 +46028,7 @@ exports["default"] = {
             return (0, exports.handlePath)(bindScopePath, tsAstTypes, options);
         }
         else {
-            globalThis.isMaxSizeee = true; // 爆栈
+            globalThis.isMaxSizeee = bindScopePath.identifier.name; // 爆栈
             return t.tsUnknownKeyword();
         }
     },
@@ -46610,7 +46602,10 @@ exports.unionUtils = {
                 return tsyTypes[0];
             }
             else {
-                return t.tsUnionType(tsyTypes.map(params => t.isTSTypeAnnotation(params) ? params.typeAnnotation : params));
+                return {
+                    typeAnnotation: t.tsUnionType(tsyTypes.map(params => t.isTSTypeAnnotation(params.typeAnnotation) ? params.typeAnnotation.typeAnnotation : params.typeAnnotation)),
+                    isMaxSizeee: tsyTypes.find(t => t.isMaxSizeee)
+                };
             }
         }
     }
