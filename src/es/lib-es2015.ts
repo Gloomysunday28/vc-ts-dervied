@@ -42,7 +42,7 @@ export const EsTSUtils = {
    * Removes the first element from an array and returns it.
    * If the array is empty, undefined is returned and the array is not modified.
    */
-  
+
   shift: (TSType = GenericT) => `shift(): ${TSType} | undefined`,
   /**
    * Returns a copy of a section of an array.
@@ -157,8 +157,19 @@ export const EsTSUtils = {
    */
   reduce: (TSType = GenericT, ReturnType = GenericT) => `reduce<${ReturnType}>(callbackfn: (previousValue: ${ReturnType}, currentValue: ${TSType}, currentIndex: number, array: ${TSType}[]) => ${ReturnType}, initialValue: ${ReturnType}): ${ReturnType};`,
   /**
-   * Calls the specified callback function for all the elements in an array, in descending order. The return value of the callback function is the accumulated result, and is provided as an argument in the next call to the callback function.
-   * @param callbackfn A function that accepts up to four arguments. The reduceRight method calls the callbackfn function one time for each element in the array.
-   * @param initialValue If initialValue is specified, it is used as the initial value to start the accumulation. The first call to the callbackfn function provides this value as an argument instead of an array value.
-  */
+    * Returns true if the sequence of elements of searchString converted to a String is the
+    * same as the corresponding elements of this object (converted to a String) starting at
+    * position. Otherwise returns false.
+    */
+  startsWith: () => `startsWith(searchString: string, position?: number): boolean;`,
+  /**
+   * Returns a supplied numeric expression rounded to the nearest integer.
+   * @param x The value to be rounded to the nearest integer.
+   */
+  round: () => `round(x: number): number`,
+  /**
+   * Returns the smallest integer greater than or equal to its numeric argument.
+   * @param x A numeric expression.
+   */
+  ceil: () => `ceil(x: number): number`,
 }

@@ -23,15 +23,40 @@ function typePromiseOrAnnotation(
   async: boolean
 ) {
   if (Array.isArray(tsTypeAnotation)) {
-    tsTypeAnotation = tsTypeAnotation.map(anotation => {
-      if (t.isTSTypeAnnotation(anotation)) {
-        return (anotation as t.TSTypeAnnotation).typeAnnotation
-      } else {
-        return anotation
+    if (globalThis.maxSizeName) {
+      tsTypeAnotation = tsTypeAnotation.map((anotation) => {
+        // @ts-ignore
+        if (anotation.type === 'TSUnionType') {
+          // @ts-ignore
+          (anotation as t.TSUnionType).types = (anotation as t.TSUnionType).types.filter(type =>  type.type !== 'TSUnionType')
+          return anotation
+        } else {
+          if (t.isTSTypeAnnotation(anotation)) {
+            return (anotation as t.TSTypeAnnotation).typeAnnotation
+          } else {
+            return anotation
+          }
+        }
+      })
+    } else {
+      tsTypeAnotation = tsTypeAnotation.map(anotation => {
+        if (t.isTSTypeAnnotation(anotation)) {
+          return (anotation as t.TSTypeAnnotation).typeAnnotation
+        } else {
+          return anotation
+        }
+      })
+    }
+  } else  {
+    if (globalThis.maxSizeName) {
+      // @ts-ignore
+      if (tsTypeAnotation.type === 'TSUnionType') {
+        // @ts-ignore
+        (tsTypeAnotation as t.TSUnionType).types = (tsTypeAnotation as t.TSUnionType).types.filter(type => type.type !== 'TSUnionType')
       }
-    })
-  } else if (t.isTSTypeAnnotation(tsTypeAnotation)) {
-    tsTypeAnotation = (tsTypeAnotation as t.TSTypeAnnotation).typeAnnotation
+    } else if (t.isTSTypeAnnotation(tsTypeAnotation)) {
+      tsTypeAnotation = (tsTypeAnotation as t.TSTypeAnnotation).typeAnnotation
+    }
   }
   return async
     ? t.tsTypeAnnotation(
@@ -60,8 +85,9 @@ function traverseFunctionDeclartion(path) {
 
         if (t.isIdentifier(argument)) {
           const bindScopePath = path.scope.bindings[argument.name];
-          const returnTypeReference = handleTsAst.Identifier(bindScopePath, [])
-
+          const returnTypeReference = handleTsAst.Identifier(bindScopePath, [], {
+            isReturnStatement: true
+          })
 
           const typeReference = {
             content: returnTypeReference,
@@ -83,10 +109,10 @@ function traverseFunctionDeclartion(path) {
         }
       });
 
+      const { node } = path;
       const references = typePromiseOrAnnotation(unionUtils.UnionType(tsTypes.map(c => c.content)), async)
 
       if (tsTypes.length && references) {
-        const { node } = path;
         bullet.addDecorateBullet({
           ...tsTypes?.[0],
           content: generate.default(references).code,

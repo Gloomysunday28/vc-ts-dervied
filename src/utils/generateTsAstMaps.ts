@@ -235,6 +235,26 @@ const generateTsTypeMap: {
   ) => {
     const { property, object } = node;
     const { parent } = path;
+    if (t.isIdentifier(property)) {
+      if (parent.right) {
+        const { name } = property;
+        const tsType = t.tsPropertySignature(
+          t.stringLiteral(name),
+          t.tsTypeAnnotation(
+            generateTsTypeMap[parent?.right?.type]?.(parent.right, path, option)
+          )
+        );
+        tsType.optional = option.optional;
+        return tsType;
+      } else {
+        const tsType = esRender.renderESGeneric(property)
+        if (tsType) return tsType
+      }
+    } else if (property.type === "PrivateName") {
+    } else {
+      // expression 表达式
+    }
+
     if (t.isIdentifier(object)) {
       const identifierPath = path.scope.getBinding(object.name).identifier;
       const typeAnnotation = identifierPath.typeAnnotation?.typeAnnotation
@@ -248,20 +268,6 @@ const generateTsTypeMap: {
       const typeAnnotation = generateTsTypeMap[object.type]?.(object, path)
 
       if (typeAnnotation) return typeAnnotation
-    }
-    if (t.isIdentifier(property) && parent.right) {
-      const { name } = property;
-      const tsType = t.tsPropertySignature(
-        t.stringLiteral(name),
-        t.tsTypeAnnotation(
-          generateTsTypeMap[parent?.right?.type]?.(parent.right, path, option)
-        )
-      );
-      tsType.optional = option.optional;
-      return tsType;
-    } else if (property.type === "PrivateName") {
-    } else {
-      // expression 表达式
     }
   },
   baseTsAstMapsExpression(node, type, option, path) {
@@ -314,22 +320,34 @@ const generateTsTypeMap: {
       }
     }
   },
+  /**
+   * 
+   * @param node.arguments是函数里的参数 callee是调用对象
+   * @param path 
+   * @returns 
+   */
   CallExpression(node: UnionFlowType<TSType, "CallExpression">, path) {
-    const { callee } = node;
+    const { callee } = node; 
     let buildASTRequire = t.tsUnknownKeyword()
     try {
       buildASTRequire = generateTsTypeMaps[callee.type]?.(callee, path);
       if (!buildASTRequire) {
-        buildASTRequire = esRender.renderESGeneric(callee)
+        buildASTRequire = esRender.renderESGeneric(callee.property)
       }
     }catch(err) {
-      buildASTRequire = esRender.renderESGeneric(callee)
+      buildASTRequire = esRender.renderESGeneric(callee.property)
     }
 
     return buildASTRequire
   },
   AssignmentExpression(node: UnionFlowType<TSType, "CallExpression">, path) {
     return generateTsTypeMap[node.right?.type]?.(node?.right, path)
+  },
+  /**
+   * @description as 断言
+   */
+  TSAsExpression(node: TSType, path) {
+    return node.typeAnnotation
   }
 };
 

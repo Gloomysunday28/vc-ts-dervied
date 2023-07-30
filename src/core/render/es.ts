@@ -2,12 +2,12 @@ import { EsTSUtils } from '../../es/lib-es2015';
 import template from '@babel/template';
 
 export const esRender = {
-  renderESGeneric(callee) {
+  renderESGeneric(property) {
     let buildASTRequire = void 0;
-    if (EsTSUtils[callee.property.name]) {
+    if (EsTSUtils[property.name]) {
       buildASTRequire = template(`
           const Generic: {
-            ${EsTSUtils[callee.property.name]()}
+            ${EsTSUtils[property.name]()}
           } = {}
         `, {
         plugins: ['typescript']

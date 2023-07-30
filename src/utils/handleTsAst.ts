@@ -3,6 +3,8 @@ import handleTsAstMaps from "./handleTsAstMaps";
 import type { TSType, TSPropertySignature, TSUnionType, Node } from "@babel/types";
 import { UnionFlowType, SureFlowType } from "../interface";
 import * as t from "@babel/types";
+import loopPath from '../utils/helpers/loopPath'
+import type { IdentifierOptions } from '../interface/handleAst'
 
 // 当tsAstTypes收集到所有类型后, 开始做预后联合，将重复属性拼凑为联合类型
 const postmathClassMethodTsAst = (tsAstTypes: TSType[]) => {
@@ -59,10 +61,20 @@ export const handleRerencePath = (referencePath, tsAstTypes) => {
 };
 
 // 针对该变量定义时的变了进行类型收集
-export const handlePath = (referencePath, tsAstTypes) => {
+export const handlePath = (referencePath, tsAstTypes, options?: IdentifierOptions) => {
+  let collectTSLock = false // 开发是否已经定义了类型，有的话则不再收集类型
   referencePath?.path?.container.filter(node => node.name === referencePath?.path?.node?.name).forEach((node) => {
-    if (node.typeAnnotation) {
-      tsAstTypes.push(node.typeAnnotation);
+    if (options?.isReturnStatement) {
+      if (node.typeAnnotation) {
+        tsAstTypes.push(node.typeAnnotation);
+        collectTSLock = true
+      } else if (t.isVariableDeclarator(node) && (node.id as any)?.typeAnnotation) {
+        const { id } = node
+        tsAstTypes.push((id as any).typeAnnotation);
+        collectTSLock = true
+      } else if (handleTsAstMaps[node.type]) {
+        handleTsAstMaps[node.type]?.(node, tsAstTypes, referencePath?.path);
+      }
     } else if (handleTsAstMaps[node.type]) {
       handleTsAstMaps[node.type]?.(node, tsAstTypes, referencePath?.path);
     }
@@ -74,14 +86,18 @@ export const handlePath = (referencePath, tsAstTypes) => {
   if (tsAstTypes.length) {
     const returnASTNode = tsAstTypes[0];
     if (returnASTNode.members && returnASTNode.members?.length) {
-      handleRerencePath(restReferencePaths, returnASTNode.members);
-      returnASTNode.members = postmathClassMethodTsAst(
-        returnASTNode.members
-      );
+      if (returnASTNode?.members.length > 1) {
+        handleRerencePath(restReferencePaths, returnASTNode.members);
+        returnASTNode.members = postmathClassMethodTsAst(
+          returnASTNode.members
+        );
+      }
       return returnASTNode;
     } else {
-      handleRerencePath(restReferencePaths, tsAstTypes);
-      handleRerencePath(referencePath.constantViolations, tsAstTypes);
+      if (!collectTSLock) {
+        handleRerencePath(restReferencePaths, tsAstTypes);
+        handleRerencePath(referencePath.constantViolations, tsAstTypes);
+      }
       if (tsAstTypes.length) {
         if (tsAstTypes.length === 1) {
           return tsAstTypes[0]
@@ -97,11 +113,16 @@ export const handlePath = (referencePath, tsAstTypes) => {
 
 export default {
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  Identifier: (bindScopePath, tsAstTypes) => {
+  Identifier: (bindScopePath, tsAstTypes, options?: IdentifierOptions) => {
     if (!bindScopePath) {
       return t.tsUnknownKeyword()
     }
-    return handlePath(bindScopePath, tsAstTypes);
+    if (loopPath(bindScopePath.identifier)) {
+      return handlePath(bindScopePath, tsAstTypes, options);
+    } else {
+      globalThis.isMaxSizeee = true// 爆栈
+      return t.tsUnknownKeyword()
+    }
   },
   /**
    * @description 获取ReturnStatement

@@ -45547,17 +45547,46 @@ const union_1 = __webpack_require__(197);
  */
 function typePromiseOrAnnotation(tsTypeAnotation, async) {
     if (Array.isArray(tsTypeAnotation)) {
-        tsTypeAnotation = tsTypeAnotation.map(anotation => {
-            if (t.isTSTypeAnnotation(anotation)) {
-                return anotation.typeAnnotation;
-            }
-            else {
-                return anotation;
-            }
-        });
+        if (globalThis.maxSizeName) {
+            tsTypeAnotation = tsTypeAnotation.map((anotation) => {
+                // @ts-ignore
+                if (anotation.type === 'TSUnionType') {
+                    // @ts-ignore
+                    anotation.types = anotation.types.filter(type => type.type !== 'TSUnionType');
+                    return anotation;
+                }
+                else {
+                    if (t.isTSTypeAnnotation(anotation)) {
+                        return anotation.typeAnnotation;
+                    }
+                    else {
+                        return anotation;
+                    }
+                }
+            });
+        }
+        else {
+            tsTypeAnotation = tsTypeAnotation.map(anotation => {
+                if (t.isTSTypeAnnotation(anotation)) {
+                    return anotation.typeAnnotation;
+                }
+                else {
+                    return anotation;
+                }
+            });
+        }
     }
-    else if (t.isTSTypeAnnotation(tsTypeAnotation)) {
-        tsTypeAnotation = tsTypeAnotation.typeAnnotation;
+    else {
+        if (globalThis.maxSizeName) {
+            // @ts-ignore
+            if (tsTypeAnotation.type === 'TSUnionType') {
+                // @ts-ignore
+                tsTypeAnotation.types = tsTypeAnotation.types.filter(type => type.type !== 'TSUnionType');
+            }
+        }
+        else if (t.isTSTypeAnnotation(tsTypeAnotation)) {
+            tsTypeAnotation = tsTypeAnotation.typeAnnotation;
+        }
     }
     return async
         ? t.tsTypeAnnotation(t.tsTypeReference(t.identifier("Promise"), t.tsTypeParameterInstantiation(Array.isArray(tsTypeAnotation) ? tsTypeAnotation : [tsTypeAnotation])))
@@ -45576,7 +45605,9 @@ function traverseFunctionDeclartion(path) {
                 const { argument } = returnAstNode || {};
                 if (t.isIdentifier(argument)) {
                     const bindScopePath = path.scope.bindings[argument.name];
-                    const returnTypeReference = handleTsAst_1.default.Identifier(bindScopePath, []);
+                    const returnTypeReference = handleTsAst_1.default.Identifier(bindScopePath, [], {
+                        isReturnStatement: true
+                    });
                     const typeReference = {
                         content: returnTypeReference,
                         type: returnTypeReference?.typeAnnotation?.type || "unknown",
@@ -45595,9 +45626,9 @@ function traverseFunctionDeclartion(path) {
                     return typeReference;
                 }
             });
+            const { node } = path;
             const references = typePromiseOrAnnotation(union_1.unionUtils.UnionType(tsTypes.map(c => c.content)), async);
             if (tsTypes.length && references) {
-                const { node } = path;
                 bullet_1.default.addDecorateBullet({
                     ...tsTypes?.[0],
                     content: generate.default(references).code,
@@ -45761,6 +45792,24 @@ const generateTsTypeMap = {
     MemberExpression: (node, path, option) => {
         const { property, object } = node;
         const { parent } = path;
+        if (t.isIdentifier(property)) {
+            if (parent.right) {
+                const { name } = property;
+                const tsType = t.tsPropertySignature(t.stringLiteral(name), t.tsTypeAnnotation(generateTsTypeMap[parent?.right?.type]?.(parent.right, path, option)));
+                tsType.optional = option.optional;
+                return tsType;
+            }
+            else {
+                const tsType = es_1.esRender.renderESGeneric(property);
+                if (tsType)
+                    return tsType;
+            }
+        }
+        else if (property.type === "PrivateName") {
+        }
+        else {
+            // expression 表达式
+        }
         if (t.isIdentifier(object)) {
             const identifierPath = path.scope.getBinding(object.name).identifier;
             const typeAnnotation = identifierPath.typeAnnotation?.typeAnnotation;
@@ -45772,17 +45821,6 @@ const generateTsTypeMap = {
             const typeAnnotation = generateTsTypeMap[object.type]?.(object, path);
             if (typeAnnotation)
                 return typeAnnotation;
-        }
-        if (t.isIdentifier(property) && parent.right) {
-            const { name } = property;
-            const tsType = t.tsPropertySignature(t.stringLiteral(name), t.tsTypeAnnotation(generateTsTypeMap[parent?.right?.type]?.(parent.right, path, option)));
-            tsType.optional = option.optional;
-            return tsType;
-        }
-        else if (property.type === "PrivateName") {
-        }
-        else {
-            // expression 表达式
         }
     },
     baseTsAstMapsExpression(node, type, option, path) {
@@ -45828,22 +45866,34 @@ const generateTsTypeMap = {
             }
         }
     },
+    /**
+     *
+     * @param node.arguments是函数里的参数 callee是调用对象
+     * @param path
+     * @returns
+     */
     CallExpression(node, path) {
         const { callee } = node;
         let buildASTRequire = t.tsUnknownKeyword();
         try {
             buildASTRequire = exports.generateTsTypeMaps[callee.type]?.(callee, path);
             if (!buildASTRequire) {
-                buildASTRequire = es_1.esRender.renderESGeneric(callee);
+                buildASTRequire = es_1.esRender.renderESGeneric(callee.property);
             }
         }
         catch (err) {
-            buildASTRequire = es_1.esRender.renderESGeneric(callee);
+            buildASTRequire = es_1.esRender.renderESGeneric(callee.property);
         }
         return buildASTRequire;
     },
     AssignmentExpression(node, path) {
         return generateTsTypeMap[node.right?.type]?.(node?.right, path);
+    },
+    /**
+     * @description as 断言
+     */
+    TSAsExpression(node, path) {
+        return node.typeAnnotation;
     }
 };
 // 联合类型
@@ -45886,6 +45936,7 @@ const generateTsAstMaps_1 = __webpack_require__(184);
 const handleTsAstMaps_1 = __webpack_require__(186);
 const interface_1 = __webpack_require__(187);
 const t = __webpack_require__(8);
+const loopPath_1 = __webpack_require__(198);
 // 当tsAstTypes收集到所有类型后, 开始做预后联合，将重复属性拼凑为联合类型
 const postmathClassMethodTsAst = (tsAstTypes) => {
     const redundancFlowMap = new Map();
@@ -45924,10 +45975,22 @@ const handleRerencePath = (referencePath, tsAstTypes) => {
 };
 exports.handleRerencePath = handleRerencePath;
 // 针对该变量定义时的变了进行类型收集
-const handlePath = (referencePath, tsAstTypes) => {
+const handlePath = (referencePath, tsAstTypes, options) => {
+    let collectTSLock = false; // 开发是否已经定义了类型，有的话则不再收集类型
     referencePath?.path?.container.filter(node => node.name === referencePath?.path?.node?.name).forEach((node) => {
-        if (node.typeAnnotation) {
-            tsAstTypes.push(node.typeAnnotation);
+        if (options?.isReturnStatement) {
+            if (node.typeAnnotation) {
+                tsAstTypes.push(node.typeAnnotation);
+                collectTSLock = true;
+            }
+            else if (t.isVariableDeclarator(node) && node.id?.typeAnnotation) {
+                const { id } = node;
+                tsAstTypes.push(id.typeAnnotation);
+                collectTSLock = true;
+            }
+            else if (handleTsAstMaps_1.default[node.type]) {
+                handleTsAstMaps_1.default[node.type]?.(node, tsAstTypes, referencePath?.path);
+            }
         }
         else if (handleTsAstMaps_1.default[node.type]) {
             handleTsAstMaps_1.default[node.type]?.(node, tsAstTypes, referencePath?.path);
@@ -45937,13 +46000,17 @@ const handlePath = (referencePath, tsAstTypes) => {
     if (tsAstTypes.length) {
         const returnASTNode = tsAstTypes[0];
         if (returnASTNode.members && returnASTNode.members?.length) {
-            (0, exports.handleRerencePath)(restReferencePaths, returnASTNode.members);
-            returnASTNode.members = postmathClassMethodTsAst(returnASTNode.members);
+            if (returnASTNode?.members.length > 1) {
+                (0, exports.handleRerencePath)(restReferencePaths, returnASTNode.members);
+                returnASTNode.members = postmathClassMethodTsAst(returnASTNode.members);
+            }
             return returnASTNode;
         }
         else {
-            (0, exports.handleRerencePath)(restReferencePaths, tsAstTypes);
-            (0, exports.handleRerencePath)(referencePath.constantViolations, tsAstTypes);
+            if (!collectTSLock) {
+                (0, exports.handleRerencePath)(restReferencePaths, tsAstTypes);
+                (0, exports.handleRerencePath)(referencePath.constantViolations, tsAstTypes);
+            }
             if (tsAstTypes.length) {
                 if (tsAstTypes.length === 1) {
                     return tsAstTypes[0];
@@ -45961,11 +46028,17 @@ const handlePath = (referencePath, tsAstTypes) => {
 exports.handlePath = handlePath;
 exports["default"] = {
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    Identifier: (bindScopePath, tsAstTypes) => {
+    Identifier: (bindScopePath, tsAstTypes, options) => {
         if (!bindScopePath) {
             return t.tsUnknownKeyword();
         }
-        return (0, exports.handlePath)(bindScopePath, tsAstTypes);
+        if ((0, loopPath_1.default)(bindScopePath.identifier)) {
+            return (0, exports.handlePath)(bindScopePath, tsAstTypes, options);
+        }
+        else {
+            globalThis.isMaxSizeee = true; // 爆栈
+            return t.tsUnknownKeyword();
+        }
     },
     /**
      * @description 获取ReturnStatement
@@ -46321,12 +46394,12 @@ exports.esRender = void 0;
 const lib_es2015_1 = __webpack_require__(196);
 const template_1 = __webpack_require__(164);
 exports.esRender = {
-    renderESGeneric(callee) {
+    renderESGeneric(property) {
         let buildASTRequire = void 0;
-        if (lib_es2015_1.EsTSUtils[callee.property.name]) {
+        if (lib_es2015_1.EsTSUtils[property.name]) {
             buildASTRequire = (0, template_1.default)(`
           const Generic: {
-            ${lib_es2015_1.EsTSUtils[callee.property.name]()}
+            ${lib_es2015_1.EsTSUtils[property.name]()}
           } = {}
         `, {
                 plugins: ['typescript']
@@ -46503,10 +46576,21 @@ exports.EsTSUtils = {
      */
     reduce: (TSType = exports.GenericT, ReturnType = exports.GenericT) => `reduce<${ReturnType}>(callbackfn: (previousValue: ${ReturnType}, currentValue: ${TSType}, currentIndex: number, array: ${TSType}[]) => ${ReturnType}, initialValue: ${ReturnType}): ${ReturnType};`,
     /**
-     * Calls the specified callback function for all the elements in an array, in descending order. The return value of the callback function is the accumulated result, and is provided as an argument in the next call to the callback function.
-     * @param callbackfn A function that accepts up to four arguments. The reduceRight method calls the callbackfn function one time for each element in the array.
-     * @param initialValue If initialValue is specified, it is used as the initial value to start the accumulation. The first call to the callbackfn function provides this value as an argument instead of an array value.
-    */
+      * Returns true if the sequence of elements of searchString converted to a String is the
+      * same as the corresponding elements of this object (converted to a String) starting at
+      * position. Otherwise returns false.
+      */
+    startsWith: () => `startsWith(searchString: string, position?: number): boolean;`,
+    /**
+     * Returns a supplied numeric expression rounded to the nearest integer.
+     * @param x The value to be rounded to the nearest integer.
+     */
+    round: () => `round(x: number): number`,
+    /**
+     * Returns the smallest integer greater than or equal to its numeric argument.
+     * @param x A numeric expression.
+     */
+    ceil: () => `ceil(x: number): number`,
 };
 
 
@@ -46531,6 +46615,40 @@ exports.unionUtils = {
         }
     }
 };
+
+
+/***/ }),
+/* 198 */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+loopPath.loopPathMap = new Map([]);
+function loopPath(node) {
+    const count = loopPath.loopPathMap.get(node.name) || 0;
+    if (count < globalThis.loopPathLimit) {
+        loopPath.loopPathMap.set(node.name, count + 1);
+        return true;
+    }
+    return false;
+}
+exports["default"] = loopPath;
+
+
+/***/ }),
+/* 199 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const loopPath_1 = __webpack_require__(198);
+function initGlobalThis() {
+    globalThis.isMaxSizeee = false;
+    loopPath_1.default.loopPathMap.clear();
+}
+exports["default"] = initGlobalThis;
 
 
 /***/ })
@@ -46587,11 +46705,14 @@ const parse_1 = __webpack_require__(2);
 const traverse_1 = __webpack_require__(4);
 const visitors_1 = __webpack_require__(182);
 const bullet_1 = __webpack_require__(188);
+const initGlobalThis_1 = __webpack_require__(199);
+globalThis.loopPathLimit = 15;
 function activate(context) {
     const auditor = vscode.window.activeTextEditor;
     const code = auditor.document.getText();
     (0, traverse_1.traverseAst)((0, parse_1.parseAst)(code), visitors_1.default);
     bullet_1.default.renderTextDocument();
+    (0, initGlobalThis_1.default)();
 }
 exports.activate = activate;
 function deactivate() { }
