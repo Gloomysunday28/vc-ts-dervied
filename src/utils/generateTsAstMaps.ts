@@ -203,16 +203,17 @@ const generateTsTypeMap: {
 
     return t.tsFunctionType(
       paramsType,
-      params.map((param) => t.identifier(param.name)),
+      params.map((param) => t.isRestElement(param) ? t.restElement(t.identifier(param.argument?.name)) : t.identifier(param.name)),
       t.tsTypeAnnotation(
-        t.isIdentifier(body)
+        (t.isIdentifier(body)
           ? handleTsAst.Identifier(path.scope.getBinding(body.name), [])
-          : generateTsTypeMaps[body.type](body, path)
+          : generateTsTypeMaps[body.type]?.(body, path)) || t.tsUnknownKeyword()
       )
     );
   },
   // 参数类型
   TsTypeParameterDeclaration: (params: UnionFlowType<Node, "Identifier">[]) => {
+    // t.isRestElement(param) ? t.restElement(param.argument.name, null, null, param.argument?.typeAnnotation?.typeAnnotation) 
     return t.tsTypeParameterDeclaration(
       params.map((param) => {
         const type = (
@@ -221,7 +222,7 @@ const generateTsTypeMap: {
         return t.tsTypeParameter(
           type || t.tsUnknownKeyword(),
           null,
-          param.name
+          t.isRestElement(param) ? param.argument?.name : param.name
         );
       })
     );
@@ -241,6 +242,12 @@ const generateTsTypeMap: {
       if (typeAnnotation) {
         return typeAnnotation;
       }
+    }
+
+    if (generateTsTypeMap[object.type]) {
+      const typeAnnotation = generateTsTypeMap[object.type]?.(object, path)
+
+      if (typeAnnotation) return typeAnnotation
     }
     if (t.isIdentifier(property) && parent.right) {
       const { name } = property;
@@ -309,14 +316,16 @@ const generateTsTypeMap: {
   },
   CallExpression(node: UnionFlowType<TSType, "CallExpression">, path) {
     const { callee } = node;
-    let buildASTRequire = void 0
-    let buildASTRequire = generateTsTypeMaps[callee.type]?.(callee, path);
-    if (!buildASTRequire) {
+    let buildASTRequire = t.tsUnknownKeyword()
+    try {
+      buildASTRequire = generateTsTypeMaps[callee.type]?.(callee, path);
+      if (!buildASTRequire) {
+        buildASTRequire = esRender.renderESGeneric(callee)
+      }
+    }catch(err) {
       buildASTRequire = esRender.renderESGeneric(callee)
-      console.log('bbb')
     }
 
-    console.log('dddd')
     return buildASTRequire
   },
   AssignmentExpression(node: UnionFlowType<TSType, "CallExpression">, path) {

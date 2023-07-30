@@ -98,6 +98,9 @@ export const handlePath = (referencePath, tsAstTypes) => {
 export default {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   Identifier: (bindScopePath, tsAstTypes) => {
+    if (!bindScopePath) {
+      return t.tsUnknownKeyword()
+    }
     return handlePath(bindScopePath, tsAstTypes);
   },
   /**
@@ -124,10 +127,18 @@ export default {
 
     const IfStatement = body?.find((node: Node) => t.isIfStatement(node)) as t.IfStatement;
     if (IfStatement) {
-      let { alternate } = IfStatement;
-      let ifStatementBodyNoode;
+      let { alternate, consequent } = IfStatement;
+      let ifStatementBodyNoode = alternate;
       while ((alternate = (alternate as any)?.alternate, alternate)) {
         ifStatementBodyNoode = alternate;
+      }
+      if (ifStatementBodyNoode && (returnStatement = this.ReturnStatement(ifStatementBodyNoode))) {
+        returnBullet = returnBullet.concat(returnStatement as t.ReturnStatement);
+      }
+
+      ifStatementBodyNoode = consequent
+      while ((consequent = (consequent as any)?.consequent, consequent)) {
+        ifStatementBodyNoode = consequent;
       }
       if (ifStatementBodyNoode && (returnStatement = this.ReturnStatement(ifStatementBodyNoode))) {
         returnBullet = returnBullet.concat(returnStatement as t.ReturnStatement);

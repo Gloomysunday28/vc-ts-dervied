@@ -55,7 +55,11 @@ const handleTsAstMaps = {
     tsAstTypes: Flow[],
     path
   ) => {
-    const { init } = node;
+    const { init, id } = node;
+
+    if ((id as any).typeAnnotation) {
+      tsAstTypes.push((id as any).typeAnnotation.typeAnnotation)
+    }
 
     if (generateTsTypeMaps[init.type]) {
       tsAstTypes.push(generateTsTypeMaps[init.type](init, path));
@@ -75,7 +79,7 @@ const handleTsAstMaps = {
     );
     if (isIdentifier) {
       const variable = path.parentPath.scope.bindings[property];
-      (variable.path.container || [])?.forEach((node) => {
+      (variable?.path?.container || [])?.forEach((node) => {
         const key = node.id?.name;
         const tsType = t.tsPropertySignature(
           t.stringLiteral(key),
@@ -90,7 +94,7 @@ const handleTsAstMaps = {
 
       if (Array.isArray(tsAstTypes)) {
         const curentTsNode = tsAstTypes.find(
-          (tsnode) => tsnode.key.value === property
+          (tsnode) => tsnode.key?.value === property
         );
         if (curentTsNode) {
           curentTsNode.value = curdGenerateTsAstMaps[

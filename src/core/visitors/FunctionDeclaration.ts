@@ -10,6 +10,7 @@ import * as vscode from "vscode";
 import * as t from "@babel/types";
 import generic from "../../utils/helpers/generic";
 import unknownRender from "../render/unknown";
+import { unionUtils } from "../../utils/helpers/union";
 
 /**
  * @description 兼容async await语法的TypeReference
@@ -34,13 +35,13 @@ function typePromiseOrAnnotation(
   }
   return async
     ? t.tsTypeAnnotation(
-        t.tsTypeReference(
-          t.identifier("Promise"),
-          t.tsTypeParameterInstantiation(
-            Array.isArray(tsTypeAnotation) ? tsTypeAnotation : [tsTypeAnotation]
-          )
+      t.tsTypeReference(
+        t.identifier("Promise"),
+        t.tsTypeParameterInstantiation(
+          Array.isArray(tsTypeAnotation) ? tsTypeAnotation : [tsTypeAnotation]
         )
       )
+    )
     : t.tsTypeAnnotation(tsTypeAnotation as t.TSType);
 }
 
@@ -50,61 +51,61 @@ function traverseFunctionDeclartion(path) {
   if (path.node.returnType) {
     return path.skip();
   }
-  const tsAstTypes: FlowType[] = [];
   const { body, async, id } = path.node;
   const returnAstNode = handleTsAst.ReturnStatement(body);
-  let typeReference: { content: string; type: string };
-  if (returnAstNode.length) {
-    returnAstNode?.forEach((returnAstNode) => {
-      try {
+  try {
+    if (returnAstNode.length) {
+      const tsTypes = returnAstNode?.map((returnAstNode) => {
         const { argument } = returnAstNode || {};
-  
+
         if (t.isIdentifier(argument)) {
           const bindScopePath = path.scope.bindings[argument.name];
-          const returnTypeReference = typePromiseOrAnnotation(
-            handleTsAst.Identifier(bindScopePath, tsAstTypes),
-            async
-          );
-  
-          typeReference = {
-            content: generate.default(returnTypeReference).code,
-            type: returnTypeReference.typeAnnotation.type,
-          };
+          const returnTypeReference = handleTsAst.Identifier(bindScopePath, [])
+
+
+          const typeReference = {
+            content: returnTypeReference,
+            type: returnTypeReference?.typeAnnotation?.type || "unknown",
+          }
+          return typeReference
         } else {
-          const returnTypeReference = typePromiseOrAnnotation(
-            argument?.type
-              ? generateTsTypeMaps[argument.type]?.(argument, path)
-              : t.tsVoidKeyword(),
-            async
-          );
-          typeReference = {
-            content: generate.default(returnTypeReference).code,
+          const returnTypeReference = argument?.type
+            ? generateTsTypeMaps[argument.type]?.(argument, path)
+            : t.tsVoidKeyword()
+
+          const typeReference = {
+            content: returnTypeReference,
             type: returnTypeReference?.typeAnnotation?.type || "unknown",
           };
+
+          path.skip();
+          return typeReference
         }
-  
-        if (typeReference) {
-          const { node } = path;
-          bullet.addDecorateBullet({
-            ...typeReference,
-            name: generic.AsyncGeneric(
-              id?.name || path?.parent?.id?.name || "Anonymous",
-              async
-            ),
-            position: new vscode.Position(
-              node.body.loc.start.line - 1,
-              node.body.loc.start.column
-            ),
-          });
-        }
-        path.skip();
-      } catch (err) {
-        unknownRender.getUnkonwnTSType(path, async);
-        path.skip();
+      });
+
+      const references = typePromiseOrAnnotation(unionUtils.UnionType(tsTypes.map(c => c.content)), async)
+
+      if (tsTypes.length && references) {
+        const { node } = path;
+        bullet.addDecorateBullet({
+          ...tsTypes?.[0],
+          content: generate.default(references).code,
+          name: generic.AsyncGeneric(
+            id?.name || path?.parent?.id?.name || "Anonymous",
+            async
+          ),
+          position: new vscode.Position(
+            node.body.loc.start.line - 1,
+            node.body.loc.start.column
+          ),
+        });
       }
-    });
-  } else {
-    unknownRender.getUnkonwnTSType(path, async, 'void');
+    } else {
+      unknownRender.getUnkonwnTSType(path, async, 'void');
+    }
+  } catch (err) {
+    unknownRender.getUnkonwnTSType(path, async);
+    path.skip();
   }
 }
 
