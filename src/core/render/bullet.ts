@@ -21,7 +21,7 @@ class Bullet {
     const { content } = bullet;
     const length = content?.match(/(\n)/g)?.length;
     if (length) {
-      const genericName = `${strUtils.uppcase(bullet.name)}`;
+      const genericName = `${strUtils.uppcase(bullet.name)}ReturnType`;
       bullet.hoverMessage = new vscode.MarkdownString(
         '类型详细情况如下 \n',
         true

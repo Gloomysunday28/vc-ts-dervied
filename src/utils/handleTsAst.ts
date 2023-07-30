@@ -16,9 +16,9 @@ const postmathClassMethodTsAst = (tsAstTypes: TSType[]) => {
     ) {
       const { value } = (flow as TSPropertySignature)
         .key as UnionFlowType<
-        UnionFlowType<TSType, "TSPropertySignature">["key"],
-        "StringLiteral"
-      >;
+          UnionFlowType<TSType, "TSPropertySignature">["key"],
+          "StringLiteral"
+        >;
       const memoryFlowType = redundancFlowMap.get(value);
       if (!memoryFlowType) {
         redundancFlowArray.push(flow);
@@ -34,8 +34,8 @@ const postmathClassMethodTsAst = (tsAstTypes: TSType[]) => {
         memoryFlowType.typeAnnotation.typeAnnotation = curdGenerateTsAstMaps.BaseTypeUnionAnnotation(
           t.isTSUnionType(memoryFlowType.typeAnnotation.typeAnnotation)
             ? (
-                memoryFlowType.typeAnnotation.typeAnnotation as TSUnionType
-              ).types
+              memoryFlowType.typeAnnotation.typeAnnotation as TSUnionType
+            ).types
             : memoryFlowType.typeAnnotation.typeAnnotation,
           (flow as TSPropertySignature).typeAnnotation.typeAnnotation
         );
@@ -60,7 +60,7 @@ export const handleRerencePath = (referencePath, tsAstTypes) => {
 
 // 针对该变量定义时的变了进行类型收集
 export const handlePath = (referencePath, tsAstTypes) => {
-  referencePath?.path?.container.forEach((node) => {
+  referencePath?.path?.container.filter(node => node.name === referencePath?.path?.node?.name).forEach((node) => {
     if (node.typeAnnotation) {
       tsAstTypes.push(node.typeAnnotation);
     } else if (handleTsAstMaps[node.type]) {
@@ -68,21 +68,30 @@ export const handlePath = (referencePath, tsAstTypes) => {
     }
   });
 
+  const restReferencePaths = referencePath.referencePaths?.filter(
+    (path) => path.key !== "body" && path.key !== "right" && !t.isReturnStatement(path.container)
+  );
   if (tsAstTypes.length) {
     const returnASTNode = tsAstTypes[0];
-    const restReferencePaths = referencePath.referencePaths?.filter(
-      (path) => path.key !== "body" && path.key !== "right"
-    );
-    if (returnASTNode.members) {
+    if (returnASTNode.members && returnASTNode.members?.length) {
       handleRerencePath(restReferencePaths, returnASTNode.members);
       returnASTNode.members = postmathClassMethodTsAst(
         returnASTNode.members
       );
+      return returnASTNode;
+    } else {
+      handleRerencePath(restReferencePaths, tsAstTypes);
+      handleRerencePath(referencePath.constantViolations, tsAstTypes);
+      if (tsAstTypes.length) {
+        if (tsAstTypes.length === 1) {
+          return tsAstTypes[0]
+        } else {
+          return t.tsUnionType(tsAstTypes)
+        }
+      }
     }
-
-    return returnASTNode;
   } else {
-    return t.voidTypeAnnotation();
+    return t.tsVoidKeyword();
   }
 };
 
@@ -103,13 +112,13 @@ export default {
         t.isReturnStatement(node)
       ))
     ) {
-      returnBullet.push(returnStatement as t.ReturnStatement); 
+      returnBullet.push(returnStatement as t.ReturnStatement);
     }
 
     const TryStatement = body?.find((node: Node) => t.isTryStatement(node)) as t.TryStatement;
     if (TryStatement) {
       if (returnStatement = this.ReturnStatement(TryStatement.block)) {
-        returnBullet = returnBullet.concat(returnStatement  as t.ReturnStatement);
+        returnBullet = returnBullet.concat(returnStatement as t.ReturnStatement);
       }
     }
 
@@ -121,7 +130,7 @@ export default {
         ifStatementBodyNoode = alternate;
       }
       if (ifStatementBodyNoode && (returnStatement = this.ReturnStatement(ifStatementBodyNoode))) {
-        returnBullet = returnBullet.concat(returnStatement  as t.ReturnStatement);
+        returnBullet = returnBullet.concat(returnStatement as t.ReturnStatement);
       }
     }
 

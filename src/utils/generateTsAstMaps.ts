@@ -1,6 +1,5 @@
 /* eslint-disable */
 // @ts-nocheck
-
 import type { GenerateTsAstMapsOption } from "../interface/generateTsAstMapsDto";
 import type { KeyofObject, UnionFlowType } from "../interface";
 import handleTsAst from "./handleTsAst";
@@ -9,18 +8,13 @@ import type {
   ObjectTypeProperty,
   ObjectTypeSpreadProperty,
   Identifier, // JSType
-  FlowType,
   Expression,
-  TSTypeParameter,
   Node, // JSType
   Flow, // FlowType
   TSType, // TSType
 } from "@babel/types";
 import * as t from "@babel/types";
-
-// TSType与FlowType都可以作为类型
-
-// js类型与Ts type的影射关系
+import { esRender } from '../core/render/es'
 
 //  js类型与Flow ast映射关系 只针对该类型生成TSType
 const generateTsTypeMap: {
@@ -184,7 +178,7 @@ const generateTsTypeMap: {
                     (propert as ObjectTypeProperty).key) as string
                 ),
                 t.tsTypeAnnotation(
-                  generateTsTypeMap[(propert as ObjectTypeProperty).value.type](
+                  generateTsTypeMap[(propert as ObjectTypeProperty).value.type]?.(
                     propert.value,
                     path
                   )
@@ -242,18 +236,18 @@ const generateTsTypeMap: {
     const { parent } = path;
     if (t.isIdentifier(object)) {
       const identifierPath = path.scope.getBinding(object.name).identifier;
-      const typeAnnotation = identifierPath.typeAnnotation?.typeAnnotation;
+      const typeAnnotation = identifierPath.typeAnnotation?.typeAnnotation
 
       if (typeAnnotation) {
         return typeAnnotation;
       }
-    } 
-    if (t.isIdentifier(property)) {
+    }
+    if (t.isIdentifier(property) && parent.right) {
       const { name } = property;
       const tsType = t.tsPropertySignature(
         t.stringLiteral(name),
         t.tsTypeAnnotation(
-          generateTsTypeMap[parent?.right?.type](parent.right, path, option)
+          generateTsTypeMap[parent?.right?.type]?.(parent.right, path, option)
         )
       );
       tsType.optional = option.optional;
@@ -294,21 +288,40 @@ const generateTsTypeMap: {
     const referenceType = operator.operatorType(node.operator);
     return generateTsTypeMap[referenceType]?.();
   },
-  LogicalExpression(node: UnionFlowType<Flow, "LogicalExpression">) {
-    const referenceType = operator.operatorType(node.operator);
+  LogicalExpression(node: UnionFlowType<TSType, "LogicalExpression">, path) {
+    const referenceType = operator.operatorType(node.operator, node, path);
     return referenceType;
   },
-  Identifier(node: UnionFlowType<Flow, "Identifier">, path) {
+  Identifier(node: UnionFlowType<TSType, "Identifier">, path) {
+    const tsyTypes = []
     const isBaseIdentifier = baseTsAstMaps.find(baseTSType => baseTSType.startsWith(node.name))
     if (isBaseIdentifier) {
-      return generateTsTypeMap[isBaseIdentifier]()
+      tsyTypes.push(generateTsTypeMap[isBaseIdentifier]())
     }
-    return handleTsAst.Identifier(path.scope.getBinding(node.name), []);
+    handleTsAst.Identifier(path.scope.getBinding(node.name), tsyTypes)
+    if (tsyTypes.length) {
+      if (tsyTypes.length === 1) {
+        return tsyTypes[0]
+      } else {
+        return t.tsUnionType(tsyTypes)
+      }
+    }
   },
-  CallExpression(node: UnionFlowType<Flow, "CallExpression">, path) {
+  CallExpression(node: UnionFlowType<TSType, "CallExpression">, path) {
     const { callee } = node;
-    return generateTsTypeMap[callee.type]?.(callee, path);
+    let buildASTRequire = void 0
+    let buildASTRequire = generateTsTypeMaps[callee.type]?.(callee, path);
+    if (!buildASTRequire) {
+      buildASTRequire = esRender.renderESGeneric(callee)
+      console.log('bbb')
+    }
+
+    console.log('dddd')
+    return buildASTRequire
   },
+  AssignmentExpression(node: UnionFlowType<TSType, "CallExpression">, path) {
+    return generateTsTypeMap[node.right?.type]?.(node?.right, path)
+  }
 };
 
 // 联合类型

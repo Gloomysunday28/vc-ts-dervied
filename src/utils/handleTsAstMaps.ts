@@ -37,7 +37,7 @@ const handleTsAstMaps = {
     tsAstTypes: Flow[],
     path: any
   ) {
-    // return handleTsAst.Identifier(path.scope.getBinding(node.name), tsAstTypes);
+    tsAstTypes.push(node.typeAnnotation || t.tsUnknownKeyword())
   },
   AssignmentExpression: (
     node: UnionFlowType<Node, "AssignmentExpression">,
@@ -60,6 +60,10 @@ const handleTsAstMaps = {
     if (generateTsTypeMaps[init.type]) {
       tsAstTypes.push(generateTsTypeMaps[init.type](init, path));
     }
+  },
+  ExpressionStatement(node: UnionFlowType<Node, 'ExpressionStatement'>, tsAstTypes, path) {
+    const { expression } = node
+    tsAstTypes.push(generateTsTypeMaps[expression.type]?.(expression, path))
   },
   MemberExpression: (containerNode, tsAstTypes, path) => {
     const property = containerNode.property.name as string;
