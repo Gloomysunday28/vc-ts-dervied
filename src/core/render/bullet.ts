@@ -8,9 +8,20 @@ import author from "../template/author";
 class Bullet {
   lineCount = 0;
   decorateBullet: BulletDto[] = [];
+  annotationDecoration: TextEditorDecorationType = vscode.window.createTextEditorDecorationType({
+    after: {
+      color: "#69676c",
+      textDecoration: "none",
+    },
+    isWholeLine: true,
+    rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
+  });
   clearDecorateBullet(): void;
   clearDecorateBullet() {
-    this.decorateBullet.length = 0;
+    if (this.decorateBullet.length) {
+      this.renderTextDocument('clear');
+      this.decorateBullet.length = 0;
+    }
   }
   /**
    * @description 判断是否需要生成interface，触发详细解释Tips
@@ -60,20 +71,12 @@ class Bullet {
    * @param auditor TextEditor
    * @returns void
    */
-  renderTextDocument(): void;
-  renderTextDocument() {
+  renderTextDocument(type?: 'clear'): void;
+  renderTextDocument(type) {
+    const isClear = type === 'clear';
     const auditor = vscode.window.activeTextEditor;
-    const annotationDecoration: TextEditorDecorationType =
-      vscode.window.createTextEditorDecorationType({
-        after: {
-          color: "#69676c",
-          textDecoration: "none",
-        },
-        isWholeLine: true,
-        rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
-      });
 
-    const range = this.decorateBullet.map((bullet) => ({
+    const range = isClear ? [] : this.decorateBullet.map((bullet) => ({
       renderOptions: {
         after: {
           contentText: bullet.content,
@@ -88,7 +91,7 @@ class Bullet {
       hoverMessage: bullet.hoverMessage,
     }));
 
-    auditor.setDecorations(annotationDecoration, range);
+    auditor.setDecorations(this.annotationDecoration, range);
   }
 }
 

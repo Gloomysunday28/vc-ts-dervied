@@ -1,17 +1,12 @@
 import * as vscode from "vscode";
-import { parseAst } from "./utils/parse";
-import { traverseAst } from "./utils/traverse";
-import visitors from "./core/visitors";
-import bullet from "./core/render/bullet";
-import initGlobalThis from './utils/helpers/initGlobalThis'
+import CoreTypeAst from './core';
 
-globalThis.loopPathLimit = 15
+const coreTypeAst = new CoreTypeAst();
+coreTypeAst.install();
 export function activate(context: vscode.ExtensionContext) {
-  const auditor = vscode.window.activeTextEditor;
-  const code = auditor.document.getText();
-  traverseAst(parseAst(code), visitors);
-	bullet.renderTextDocument();
-  initGlobalThis()
+  coreTypeAst.transformAST(vscode.window.activeTextEditor.document);
 }
 
-export function deactivate() {}
+export function deactivate() {
+  coreTypeAst.deactivate();
+}

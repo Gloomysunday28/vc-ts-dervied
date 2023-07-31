@@ -5,7 +5,7 @@ import {
   curdGenerateTsAstMaps,
   baseTsAstMaps,
 } from "./generateTsAstMaps";
-import type { Node, Flow } from "@babel/types";
+import type { Node, Flow, TSType, CallExpression } from "@babel/types";
 import type { UnionFlowType } from "../interface";
 import handleTsAst, { handleRerencePath } from "./handleTsAst";
 const t = require("@babel/types");
@@ -37,7 +37,7 @@ const handleTsAstMaps = {
     tsAstTypes: Flow[],
     path: any
   ) {
-    tsAstTypes.push(node.typeAnnotation || t.tsUnknownKeyword())
+    tsAstTypes.push(node.typeAnnotation || t.tsUnknownKeyword());
   },
   AssignmentExpression: (
     node: UnionFlowType<Node, "AssignmentExpression">,
@@ -53,26 +53,42 @@ const handleTsAstMaps = {
   VariableDeclarator: (
     node: UnionFlowType<Node, "VariableDeclarator">,
     tsAstTypes: Flow[],
-    path
+    path,
+    options?
   ) => {
     const { init, id } = node;
 
     if ((id as any).typeAnnotation) {
-      tsAstTypes.push((id as any).typeAnnotation.typeAnnotation)
+      tsAstTypes.push((id as any).typeAnnotation.typeAnnotation);
     }
 
     if (generateTsTypeMaps[init.type]) {
-      tsAstTypes.push(generateTsTypeMaps[init.type](init, path));
+      tsAstTypes.push(generateTsTypeMaps[init.type]?.(init, path));
     }
   },
-  ExpressionStatement(node: UnionFlowType<Node, 'ExpressionStatement'>, tsAstTypes, path) {
-    const { expression } = node
-    tsAstTypes.push(generateTsTypeMaps[expression.type]?.(expression, path))
+  AwaitExpression(
+    node: UnionFlowType<Node, "AwaitExpression">,
+    tsAstTypes: TSType[],
+    path
+  ) {
+    const { argument } = node
+
+    if ((argument as CallExpression).typeParameters) {
+      return (argument as CallExpression).typeParameters
+    }
   },
-  MemberExpression: (containerNode, tsAstTypes, path) => {
+  ExpressionStatement(
+    node: UnionFlowType<Node, "ExpressionStatement">,
+    tsAstTypes,
+    path
+  ) {
+    const { expression } = node;
+    tsAstTypes.push(generateTsTypeMaps[expression.type]?.(expression, path));
+  },
+  MemberExpression: (containerNode, tsAstTypes, path, options?) => {
     const property = containerNode.property.name as string;
     const isIdentifier = t.isIdentifier(
-      getNodeProperty[path.parentPath.container.type](
+      getNodeProperty[path.parentPath.container.type]?.(
         path.parentPath.container,
         path
       )
@@ -83,9 +99,11 @@ const handleTsAstMaps = {
         const key = node.id?.name;
         const tsType = t.tsPropertySignature(
           t.stringLiteral(key),
-          t.tsTypeAnnotation(generateTsTypeMaps[node.init.type](node.init, path, {
-            optional: t.isBlockStatement(path.scope.block),
-          }))
+          t.tsTypeAnnotation(
+            generateTsTypeMaps[node.init.type](node.init, path, {
+              optional: t.isBlockStatement(path.scope.block),
+            })
+          )
         );
 
         (tsType.optional = t.isBlockStatement(path.scope.block)),

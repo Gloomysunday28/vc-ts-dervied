@@ -172,4 +172,17 @@ export const EsTSUtils = {
    * @param x A numeric expression.
    */
   ceil: () => `ceil(x: number): number`,
-}
+  /**
+     * Replaces text in a string, using a regular expression or search string.
+     * @param searchValue A string to search for.
+     * @param replacer A function that returns the replacement text.
+     */
+  replace: () => `replace(searchValue: string | RegExp, replacer: (substring: string, ...args: any[]) => string): string`,
+  /**
+  * Converts a JavaScript Object Notation (JSON) string into an object.
+  * @param text A valid JSON string.
+  * @param reviver A function that transforms the results. This function is called for each member of the object.
+  * If a member contains nested objects, the nested objects are transformed before the parent object is.
+  */
+  parse: () => `parse(text: string, reviver?: (this: any, key: string, value: any) => any): any`,
+};

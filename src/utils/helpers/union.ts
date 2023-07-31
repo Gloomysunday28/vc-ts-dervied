@@ -1,4 +1,5 @@
 import * as t from '@babel/types';
+import utils from '..';
 
 export const unionUtils = {
   UnionType(tsyTypes) {
@@ -12,5 +13,21 @@ export const unionUtils = {
         }
       }
     }
+  },
+  /**
+   * 整合数组各个TS类型变成联合类型
+   */
+  IntegrateTSTypeToUnionType(tsTypes: t.TSType[]) {
+    const untionTypes = tsTypes.map(tsType => {
+      if (t.isTSUnionType(tsType)) {
+        return tsType.types;
+      } else if (t.isTSTypeAnnotation(tsType)){
+        return (tsType as t.TSTypeAnnotation).typeAnnotation;
+      } else {
+        return tsType;
+      }
+    }).flat(Infinity) as t.TSType[];
+
+    return t.tsUnionType(utils.dedupArray(untionTypes, 'type'));
   }
-}
+};

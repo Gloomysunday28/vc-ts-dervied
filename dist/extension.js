@@ -45532,27 +45532,28 @@ exports["default"] = {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const generateTsAstMaps_1 = __webpack_require__(184);
 const handleTsAst_1 = __webpack_require__(185);
-const bullet_1 = __webpack_require__(188);
+const bullet_1 = __webpack_require__(189);
 const generate = __webpack_require__(115);
 const vscode = __webpack_require__(1);
 const t = __webpack_require__(8);
-const generic_1 = __webpack_require__(192);
-const unknown_1 = __webpack_require__(193);
-const union_1 = __webpack_require__(197);
+const generic_1 = __webpack_require__(193);
+const unknown_1 = __webpack_require__(197);
+const union_1 = __webpack_require__(198);
 function typePromiseOrAnnotation(tsTypeAnotation, async) {
     let annotation;
     if (Array.isArray(tsTypeAnotation)) {
-        annotation = tsTypeAnotation.map(anotation => {
+        annotation = tsTypeAnotation.map((anotation) => {
             if (anotation.isMaxSizeee) {
-                if (anotation.type === 'TSUnionType') {
+                if (anotation.type === "TSUnionType") {
                     // @ts-ignore
-                    anotation.typeAnnotation.types = anotation.typeAnnotation?.types.filter(type => type.type !== 'TSUnionType');
+                    anotation.typeAnnotation.types = anotation.typeAnnotation?.types.filter((type) => type.type !== "TSUnionType");
                     return anotation.typeAnnotation;
                 }
             }
             else {
                 if (t.isTSTypeAnnotation(anotation.typeAnnotation)) {
-                    return anotation.typeAnnotation.typeAnnotation;
+                    return anotation.typeAnnotation
+                        .typeAnnotation;
                 }
                 else {
                     return anotation.typeAnnotation;
@@ -45564,21 +45565,22 @@ function typePromiseOrAnnotation(tsTypeAnotation, async) {
         annotation = tsTypeAnotation.typeAnnotation;
         if (tsTypeAnotation.isMaxSizeee) {
             // @ts-ignore
-            if (annotation.type === 'TSUnionType') {
+            if (annotation.type === "TSUnionType") {
                 // @ts-ignore
-                annotation.types = annotation.types.filter(type => type.type !== 'TSUnionType');
+                annotation.types = annotation.types.filter((type) => type.type !== "TSUnionType");
             }
             // @ts-ignore
         }
         else if (t.isTSTypeAnnotation(tsTypeAnotation.typeAnnotation)) {
-            annotation = tsTypeAnotation.typeAnnotation.typeAnnotation;
+            annotation = tsTypeAnotation.typeAnnotation
+                .typeAnnotation;
         }
     }
     return async
         ? t.tsTypeAnnotation(t.tsTypeReference(t.identifier("Promise"), t.tsTypeParameterInstantiation(Array.isArray(annotation) ? annotation : [annotation])))
         : t.tsTypeAnnotation(annotation);
 }
-const FunctionDeclaration = 'FunctionDeclaration|ArrowFunctionExpression|ClassMethod';
+const FunctionDeclaration = "FunctionDeclaration|ArrowFunctionExpression|ClassMethod";
 function traverseFunctionDeclartion(path) {
     if (path.node.returnType) {
         return path.skip();
@@ -45588,38 +45590,45 @@ function traverseFunctionDeclartion(path) {
     try {
         if (returnAstNode.length) {
             const tsTypes = returnAstNode?.map((returnAstNode) => {
-                const { argument } = returnAstNode || {};
-                if (t.isIdentifier(argument)) {
-                    const bindScopePath = path.scope.bindings[argument.name];
-                    const returnTypeReference = handleTsAst_1.default.Identifier(bindScopePath, [], {
-                        isReturnStatement: true
-                    });
-                    const typeReference = {
-                        content: {
-                            typeAnnotation: returnTypeReference,
-                            isMaxSizeee: globalThis.isMaxSizeee === bindScopePath?.identifier?.name
-                        },
-                        type: returnTypeReference?.typeAnnotation?.type || "unknown",
-                    };
-                    globalThis.isMaxSizeee = '';
-                    return typeReference;
+                try {
+                    const { argument } = returnAstNode || {};
+                    if (t.isIdentifier(argument)) {
+                        const bindScopePath = path.scope.bindings[argument.name];
+                        const returnTypeReference = handleTsAst_1.default.Identifier(bindScopePath, [], {
+                            isReturnStatement: true,
+                        });
+                        const typeReference = {
+                            content: {
+                                typeAnnotation: returnTypeReference,
+                                isMaxSizeee: globalThis.isMaxSizeee === bindScopePath?.identifier?.name,
+                            },
+                            type: returnTypeReference?.typeAnnotation?.type || "unknown",
+                        };
+                        globalThis.isMaxSizeee = "";
+                        return typeReference;
+                    }
+                    else {
+                        const returnTypeReference = argument?.type
+                            ? generateTsAstMaps_1.generateTsTypeMaps[argument.type]?.(argument, path, {
+                                isReturnStatement: true,
+                            })
+                            : t.tsVoidKeyword();
+                        const typeReference = {
+                            content: {
+                                typeAnnotation: returnTypeReference,
+                            },
+                            type: returnTypeReference?.typeAnnotation?.type || "unknown",
+                        };
+                        path.skip();
+                        return typeReference;
+                    }
                 }
-                else {
-                    const returnTypeReference = argument?.type
-                        ? generateTsAstMaps_1.generateTsTypeMaps[argument.type]?.(argument, path)
-                        : t.tsVoidKeyword();
-                    const typeReference = {
-                        content: {
-                            typeAnnotation: returnTypeReference,
-                        },
-                        type: returnTypeReference?.typeAnnotation?.type || "unknown",
-                    };
-                    path.skip();
-                    return typeReference;
+                catch (err) {
+                    unknown_1.default.getUnkonwnTSType(path, async);
                 }
             });
             const { node } = path;
-            const references = typePromiseOrAnnotation(union_1.unionUtils.UnionType(tsTypes.map(c => c.content)), async);
+            const references = typePromiseOrAnnotation(union_1.unionUtils.UnionType(tsTypes.map((c) => c.content)), async);
             if (tsTypes.length && references) {
                 bullet_1.default.addDecorateBullet({
                     ...tsTypes?.[0],
@@ -45630,7 +45639,7 @@ function traverseFunctionDeclartion(path) {
             }
         }
         else {
-            unknown_1.default.getUnkonwnTSType(path, async, 'void');
+            unknown_1.default.getUnkonwnTSType(path, async, "void");
         }
     }
     catch (err) {
@@ -45643,7 +45652,7 @@ function default_1() {
         [FunctionDeclaration]: {
             enter: (path) => {
                 traverseFunctionDeclartion(path);
-            }
+            },
         },
     };
 }
@@ -45659,13 +45668,18 @@ exports["default"] = default_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.baseTsAstMaps = exports.curdGenerateTsAstMaps = exports.generateTsTypeMaps = void 0;
 const handleTsAst_1 = __webpack_require__(185);
-const operator_1 = __webpack_require__(194);
+const operator_1 = __webpack_require__(188);
 const t = __webpack_require__(8);
 const es_1 = __webpack_require__(195);
+const union_1 = __webpack_require__(198);
 //  js类型与Flow ast映射关系 只针对该类型生成TSType
 const generateTsTypeMap = {
-    undefined: t.voidTypeAnnotation,
+    undefined: t.tsVoidKeyword,
+    NullLiteral: t.tsNullKeyword,
     number: (node) => {
+        return node ? t.tsLiteralType(node) : t.TSNumberKeyword();
+    },
+    NumberLiteral: (node) => {
         return node ? t.tsLiteralType(node) : t.TSNumberKeyword();
     },
     NumericLiteral: (node) => {
@@ -45711,6 +45725,14 @@ const generateTsTypeMap = {
         return t.tsDeclareFunction(paramsType, functionParams, restParams, options.returnType
             ? generateTsTypeMap[options.returnType.type](options.returnType)
             : t.tsAnyKeyword());
+    },
+    AwaitExpression(node, path) {
+        const { argument } = node;
+        if (argument.typeParameters) {
+            return union_1.unionUtils.UnionType(argument.typeParameters.params);
+        }
+        // TODO:
+        return t.tsUnknownKeyword();
     },
     VariableDeclarator: (node, path, option) => {
         const { init } = node;
@@ -45810,10 +45832,49 @@ const generateTsTypeMap = {
             }
         }
         if (generateTsTypeMap[object.type]) {
-            const typeAnnotation = generateTsTypeMap[object.type]?.(object, path);
-            if (typeAnnotation)
-                return typeAnnotation;
+            if ((t.isIdentifier(object) && option?.isReturnStatement) || !option?.isReturnStatement) {
+                const typeAnnotation = generateTsTypeMap[object.type]?.(object, path, option);
+                if (typeAnnotation)
+                    return typeAnnotation;
+            }
         }
+    },
+    OptionalMemberExpression: (node, path, option) => {
+        const { property, object } = node;
+        const { parent } = path;
+        if (t.isIdentifier(property)) {
+            if (parent.right) {
+                const { name } = property;
+                const tsType = t.tsPropertySignature(t.stringLiteral(name), t.tsTypeAnnotation(generateTsTypeMap[parent?.right?.type]?.(parent.right, path, option)));
+                tsType.optional = option.optional;
+                return tsType;
+            }
+            else {
+                const tsType = es_1.esRender.renderESGeneric(property);
+                if (tsType)
+                    return tsType;
+            }
+        }
+        else if (property.type === "PrivateName") {
+        }
+        else {
+            // expression 表达式
+        }
+        if (t.isIdentifier(object)) {
+            const identifierPath = path.scope.getBinding(object.name)?.identifier;
+            const typeAnnotation = identifierPath?.typeAnnotation?.typeAnnotation;
+            if (typeAnnotation) {
+                return typeAnnotation;
+            }
+        }
+        if (generateTsTypeMap[object.type]) {
+            if ((t.isIdentifier(object) && option?.isReturnStatement) || !option?.isReturnStatement) {
+                const typeAnnotation = generateTsTypeMap[object.type]?.(object, path, option);
+                if (typeAnnotation)
+                    return typeAnnotation;
+            }
+        }
+        return t.tsUnknownKeyword();
     },
     baseTsAstMapsExpression(node, type, option, path) {
         return baseTsAstMaps.includes(type)
@@ -45842,13 +45903,17 @@ const generateTsTypeMap = {
         const referenceType = operator_1.default.operatorType(node.operator, node, path);
         return referenceType;
     },
-    Identifier(node, path) {
+    OptionalCallExpression(node, path) {
+        const { callee } = node;
+        return t.isOptionalMemberExpression(callee) ? t.tsUnionType([generateTsTypeMap[callee.type]?.(callee, path), t.tsVoidKeyword()]) : t.tsVoidKeyword();
+    },
+    Identifier(node, path, option) {
         const tsyTypes = [];
         const isBaseIdentifier = baseTsAstMaps.find(baseTSType => baseTSType.startsWith(node.name));
         if (isBaseIdentifier) {
             tsyTypes.push(generateTsTypeMap[isBaseIdentifier]());
         }
-        handleTsAst_1.default.Identifier(path.scope.getBinding(node.name), tsyTypes);
+        handleTsAst_1.default.Identifier(path.scope.getBinding(node.name), tsyTypes, option);
         if (tsyTypes.length) {
             if (tsyTypes.length === 1) {
                 return tsyTypes[0];
@@ -45866,17 +45931,20 @@ const generateTsTypeMap = {
      */
     CallExpression(node, path) {
         const { callee } = node;
+        if (node.typeParameters) {
+            return union_1.unionUtils.UnionType(node.typeParameters.params);
+        }
         let buildASTRequire = t.tsUnknownKeyword();
         try {
             buildASTRequire = exports.generateTsTypeMaps[callee.type]?.(callee, path);
-            if (!buildASTRequire) {
+            if (!buildASTRequire && callee.propert) {
                 buildASTRequire = es_1.esRender.renderESGeneric(callee.property);
             }
         }
         catch (err) {
             buildASTRequire = es_1.esRender.renderESGeneric(callee.property);
         }
-        return buildASTRequire;
+        return buildASTRequire || t.tsUnknownKeyword();
     },
     AssignmentExpression(node, path) {
         return generateTsTypeMap[node.right?.type]?.(node?.right, path);
@@ -45884,8 +45952,12 @@ const generateTsTypeMap = {
     /**
      * @description as 断言
      */
-    TSAsExpression(node, path) {
+    TSAsExpression(node) {
         return node.typeAnnotation;
+    },
+    ConditionalExpression(node, path) {
+        const { consequent, alternate } = node;
+        return union_1.unionUtils.IntegrateTSTypeToUnionType([generateTsTypeMap[consequent.type]?.(consequent, path), generateTsTypeMap[alternate.type]?.(alternate, path)]);
     }
 };
 // 联合类型
@@ -45898,6 +45970,7 @@ const baseTsAstMaps = [
     "StringTypeAnnotation",
     "BooleanTypeAnnotation",
     "UnionTypeAnnotation",
+    'undefined'
 ];
 exports.baseTsAstMaps = baseTsAstMaps;
 // 对既有TSAst数据进行操作
@@ -45928,7 +46001,8 @@ const generateTsAstMaps_1 = __webpack_require__(184);
 const handleTsAstMaps_1 = __webpack_require__(186);
 const interface_1 = __webpack_require__(187);
 const t = __webpack_require__(8);
-const loopPath_1 = __webpack_require__(198);
+const loopPath_1 = __webpack_require__(194);
+const getReturnStatement_1 = __webpack_require__(200);
 // 当tsAstTypes收集到所有类型后, 开始做预后联合，将重复属性拼凑为联合类型
 const postmathClassMethodTsAst = (tsAstTypes) => {
     const redundancFlowMap = new Map();
@@ -45973,16 +46047,15 @@ const handlePath = (referencePath, tsAstTypes, options) => {
         if (options?.isReturnStatement) {
             if (node.typeAnnotation) {
                 tsAstTypes.push(node.typeAnnotation);
-                collectTSLock = true;
             }
             else if (t.isVariableDeclarator(node) && node.id?.typeAnnotation) {
                 const { id } = node;
                 tsAstTypes.push(id.typeAnnotation);
-                collectTSLock = true;
             }
             else if (handleTsAstMaps_1.default[node.type]) {
-                handleTsAstMaps_1.default[node.type]?.(node, tsAstTypes, referencePath?.path);
+                handleTsAstMaps_1.default[node.type]?.(node, tsAstTypes, referencePath?.path, options);
             }
+            collectTSLock = true;
         }
         else if (handleTsAstMaps_1.default[node.type]) {
             handleTsAstMaps_1.default[node.type]?.(node, tsAstTypes, referencePath?.path);
@@ -46042,29 +46115,17 @@ exports["default"] = {
         if ((returnStatement = body?.find((node) => t.isReturnStatement(node)))) {
             returnBullet.push(returnStatement);
         }
-        const TryStatement = body?.find((node) => t.isTryStatement(node));
+        const TryStatement = body?.filter((node) => t.isTryStatement(node));
         if (TryStatement) {
-            if (returnStatement = this.ReturnStatement(TryStatement.block)) {
-                returnBullet = returnBullet.concat(returnStatement);
-            }
+            returnBullet = getReturnStatement_1.default.TryStatement(TryStatement, returnBullet);
         }
-        const IfStatement = body?.find((node) => t.isIfStatement(node));
-        if (IfStatement) {
-            let { alternate, consequent } = IfStatement;
-            let ifStatementBodyNoode = alternate;
-            while ((alternate = alternate?.alternate, alternate)) {
-                ifStatementBodyNoode = alternate;
-            }
-            if (ifStatementBodyNoode && (returnStatement = this.ReturnStatement(ifStatementBodyNoode))) {
-                returnBullet = returnBullet.concat(returnStatement);
-            }
-            ifStatementBodyNoode = consequent;
-            while ((consequent = consequent?.consequent, consequent)) {
-                ifStatementBodyNoode = consequent;
-            }
-            if (ifStatementBodyNoode && (returnStatement = this.ReturnStatement(ifStatementBodyNoode))) {
-                returnBullet = returnBullet.concat(returnStatement);
-            }
+        const IfStatement = body?.filter((node) => t.isIfStatement(node));
+        if (IfStatement?.length) {
+            returnBullet = getReturnStatement_1.default.IfStatement(IfStatement, returnBullet);
+        }
+        const SwitchStatement = body?.filter((node) => t.isSwitchStatement(node));
+        if (SwitchStatement?.length) {
+            returnBullet = getReturnStatement_1.default.SwitchStatement(SwitchStatement, returnBullet);
         }
         return returnBullet;
     },
@@ -46106,22 +46167,28 @@ const handleTsAstMaps = {
             handleTsAstMaps[left.type](left, tsAstTypes, path);
         }
     },
-    VariableDeclarator: (node, tsAstTypes, path) => {
+    VariableDeclarator: (node, tsAstTypes, path, options) => {
         const { init, id } = node;
         if (id.typeAnnotation) {
             tsAstTypes.push(id.typeAnnotation.typeAnnotation);
         }
         if (generateTsAstMaps_1.generateTsTypeMaps[init.type]) {
-            tsAstTypes.push(generateTsAstMaps_1.generateTsTypeMaps[init.type](init, path));
+            tsAstTypes.push(generateTsAstMaps_1.generateTsTypeMaps[init.type]?.(init, path));
+        }
+    },
+    AwaitExpression(node, tsAstTypes, path) {
+        const { argument } = node;
+        if (argument.typeParameters) {
+            return argument.typeParameters;
         }
     },
     ExpressionStatement(node, tsAstTypes, path) {
         const { expression } = node;
         tsAstTypes.push(generateTsAstMaps_1.generateTsTypeMaps[expression.type]?.(expression, path));
     },
-    MemberExpression: (containerNode, tsAstTypes, path) => {
+    MemberExpression: (containerNode, tsAstTypes, path, options) => {
         const property = containerNode.property.name;
-        const isIdentifier = t.isIdentifier(getNodeProperty[path.parentPath.container.type](path.parentPath.container, path));
+        const isIdentifier = t.isIdentifier(getNodeProperty[path.parentPath.container.type]?.(path.parentPath.container, path));
         if (isIdentifier) {
             const variable = path.parentPath.scope.bindings[property];
             (variable?.path?.container || [])?.forEach((node) => {
@@ -46175,17 +46242,55 @@ exports.SureFlowType = SureFlowType;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+const generateTsAstMaps_1 = __webpack_require__(184);
+const t = __webpack_require__(8);
+exports["default"] = {
+    numberOperator: ['+', '-', '*', '**', '/', '%', '&', '|', '>>', '>>>', '<<', '^'],
+    booleanOperator: ["==", "===", "!=", "!==", "in", "instanceof", ">", "<", ">=", "<=", ",>"],
+    expressionOperator: ['||', '&&', '??'],
+    operatorType(operator, node, path) {
+        if (this.numberOperator.includes(operator)) {
+            return 'NumericLiteral';
+        }
+        else if (this.booleanOperator.includes(operator)) {
+            return 'BooleanLiteral';
+        }
+        else if (this.expressionOperator.includes(operator)) {
+            return t.tsUnionType([generateTsAstMaps_1.generateTsTypeMaps[node.left.type]?.(node.left, path) || t.tsUnknownKeyword(), generateTsAstMaps_1.generateTsTypeMaps[node.right.type]?.(node.right, path) || t.tsUnknownKeyword()]);
+        }
+    }
+};
+
+
+/***/ }),
+/* 189 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 const vscode = __webpack_require__(1);
-const format_1 = __webpack_require__(189);
-const string_1 = __webpack_require__(190);
-const author_1 = __webpack_require__(191);
+const format_1 = __webpack_require__(190);
+const string_1 = __webpack_require__(191);
+const author_1 = __webpack_require__(192);
 class Bullet {
     constructor() {
         this.lineCount = 0;
         this.decorateBullet = [];
+        this.annotationDecoration = vscode.window.createTextEditorDecorationType({
+            after: {
+                color: "#69676c",
+                textDecoration: "none",
+            },
+            isWholeLine: true,
+            rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
+        });
     }
     clearDecorateBullet() {
-        this.decorateBullet.length = 0;
+        if (this.decorateBullet.length) {
+            this.renderTextDocument('clear');
+            this.decorateBullet.length = 0;
+        }
     }
     generateInterface(bullet) {
         const { content } = bullet;
@@ -46213,17 +46318,10 @@ class Bullet {
             this.decorateBullet.push(bullet);
         }
     }
-    renderTextDocument() {
+    renderTextDocument(type) {
+        const isClear = type === 'clear';
         const auditor = vscode.window.activeTextEditor;
-        const annotationDecoration = vscode.window.createTextEditorDecorationType({
-            after: {
-                color: "#69676c",
-                textDecoration: "none",
-            },
-            isWholeLine: true,
-            rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
-        });
-        const range = this.decorateBullet.map((bullet) => ({
+        const range = isClear ? [] : this.decorateBullet.map((bullet) => ({
             renderOptions: {
                 after: {
                     contentText: bullet.content,
@@ -46232,14 +46330,14 @@ class Bullet {
             range: auditor.document.validateRange(new vscode.Range(bullet.position, bullet.position)),
             hoverMessage: bullet.hoverMessage,
         }));
-        auditor.setDecorations(annotationDecoration, range);
+        auditor.setDecorations(this.annotationDecoration, range);
     }
 }
 exports["default"] = new Bullet();
 
 
 /***/ }),
-/* 189 */
+/* 190 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -46268,7 +46366,7 @@ exports["default"] = new Format();
 
 
 /***/ }),
-/* 190 */
+/* 191 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -46294,7 +46392,7 @@ exports["default"] = {
 
 
 /***/ }),
-/* 191 */
+/* 192 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -46310,13 +46408,13 @@ exports["default"] = `
 
 
 /***/ }),
-/* 192 */
+/* 193 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const string_1 = __webpack_require__(190);
+const string_1 = __webpack_require__(191);
 exports["default"] = {
     AsyncGeneric(generic, async) {
         return `${async ? 'Promise<' : ''}${string_1.default.uppcase(generic)}${async ? '>' : ''}`;
@@ -46325,54 +46423,22 @@ exports["default"] = {
 
 
 /***/ }),
-/* 193 */
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const generic_1 = __webpack_require__(192);
-const bullet_1 = __webpack_require__(188);
-const vscode = __webpack_require__(1);
-exports["default"] = {
-    getUnkonwnTSType(path, async, unknownMark = '?') {
-        const { node } = path;
-        const { id } = node;
-        bullet_1.default.addDecorateBullet({
-            content: async ? `: Promise<${unknownMark}>` : `: ${unknownMark}`,
-            type: "?",
-            name: generic_1.default.AsyncGeneric(id?.name || path?.parent?.id?.name || "Anonymous", async),
-            position: new vscode.Position(node.body.loc.start.line - 1, node.body.loc.start.column),
-        });
-    }
-};
-
-
-/***/ }),
 /* 194 */
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const generateTsAstMaps_1 = __webpack_require__(184);
-const t = __webpack_require__(8);
-exports["default"] = {
-    numberOperator: ['+', '-', '*', '**', '/', '%', '&', '|', '>>', '>>>', '<<', '^'],
-    booleanOperator: ["==", "===", "!=", "!==", "in", "instanceof", ">", "<", ">=", "<=", ",>"],
-    expressionOperator: ['||', '&&', '??'],
-    operatorType(operator, node, path) {
-        if (this.numberOperator.includes(operator)) {
-            return 'NumericLiteral';
-        }
-        else if (this.booleanOperator.includes(operator)) {
-            return 'BooleanLiteral';
-        }
-        else if (this.expressionOperator.includes(operator)) {
-            return t.tsUnionType([generateTsAstMaps_1.generateTsTypeMaps[node.left.type]?.(node.left, path) || t.tsUnknownKeyword(), generateTsAstMaps_1.generateTsTypeMaps[node.right.type]?.(node.right, path) || t.tsUnknownKeyword()]);
-        }
+loopPath.loopPathMap = new Map([]);
+function loopPath(node) {
+    const count = loopPath.loopPathMap.get(node.name) || 0;
+    if (count < globalThis.loopPathLimit) {
+        loopPath.loopPathMap.set(node.name, count + 1);
+        return true;
     }
-};
+    return false;
+}
+exports["default"] = loopPath;
 
 
 /***/ }),
@@ -46387,17 +46453,16 @@ const lib_es2015_1 = __webpack_require__(196);
 const template_1 = __webpack_require__(164);
 exports.esRender = {
     renderESGeneric(property) {
-        let buildASTRequire = void 0;
         if (lib_es2015_1.EsTSUtils[property.name]) {
-            buildASTRequire = (0, template_1.default)(`
+            const buildASTRequire = (0, template_1.default)(`
           const Generic: {
             ${lib_es2015_1.EsTSUtils[property.name]()}
           } = {}
         `, {
                 plugins: ['typescript']
             })?.().declarations?.[0].id.typeAnnotation.typeAnnotation;
+            return buildASTRequire;
         }
-        return buildASTRequire;
     }
 };
 
@@ -46583,6 +46648,19 @@ exports.EsTSUtils = {
      * @param x A numeric expression.
      */
     ceil: () => `ceil(x: number): number`,
+    /**
+       * Replaces text in a string, using a regular expression or search string.
+       * @param searchValue A string to search for.
+       * @param replacer A function that returns the replacement text.
+       */
+    replace: () => `replace(searchValue: string | RegExp, replacer: (substring: string, ...args: any[]) => string): string`,
+    /**
+    * Converts a JavaScript Object Notation (JSON) string into an object.
+    * @param text A valid JSON string.
+    * @param reviver A function that transforms the results. This function is called for each member of the object.
+    * If a member contains nested objects, the nested objects are transformed before the parent object is.
+    */
+    parse: () => `parse(text: string, reviver?: (this: any, key: string, value: any) => any): any`,
 };
 
 
@@ -46593,8 +46671,33 @@ exports.EsTSUtils = {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+const generic_1 = __webpack_require__(193);
+const bullet_1 = __webpack_require__(189);
+const vscode = __webpack_require__(1);
+exports["default"] = {
+    getUnkonwnTSType(path, async, unknownMark = '?') {
+        const { node } = path;
+        const { id } = node;
+        bullet_1.default.addDecorateBullet({
+            content: async ? `: Promise<${unknownMark}>` : `: ${unknownMark}`,
+            type: "?",
+            name: generic_1.default.AsyncGeneric(id?.name || path?.parent?.id?.name || "Anonymous", async),
+            position: new vscode.Position(node.body.loc.start.line - 1, node.body.loc.start.column),
+        });
+    }
+};
+
+
+/***/ }),
+/* 198 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.unionUtils = void 0;
 const t = __webpack_require__(8);
+const __1 = __webpack_require__(201);
 exports.unionUtils = {
     UnionType(tsyTypes) {
         if (tsyTypes.length) {
@@ -46608,27 +46711,25 @@ exports.unionUtils = {
                 };
             }
         }
+    },
+    /**
+     * 整合数组各个TS类型变成联合类型
+     */
+    IntegrateTSTypeToUnionType(tsTypes) {
+        const untionTypes = tsTypes.map(tsType => {
+            if (t.isTSUnionType(tsType)) {
+                return tsType.types;
+            }
+            else if (t.isTSTypeAnnotation(tsType)) {
+                return tsType.typeAnnotation;
+            }
+            else {
+                return tsType;
+            }
+        }).flat(Infinity);
+        return t.tsUnionType(__1.default.dedupArray(untionTypes, 'type'));
     }
 };
-
-
-/***/ }),
-/* 198 */
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-loopPath.loopPathMap = new Map([]);
-function loopPath(node) {
-    const count = loopPath.loopPathMap.get(node.name) || 0;
-    if (count < globalThis.loopPathLimit) {
-        loopPath.loopPathMap.set(node.name, count + 1);
-        return true;
-    }
-    return false;
-}
-exports["default"] = loopPath;
 
 
 /***/ }),
@@ -46638,12 +46739,175 @@ exports["default"] = loopPath;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const loopPath_1 = __webpack_require__(198);
+const loopPath_1 = __webpack_require__(194);
 function initGlobalThis() {
     globalThis.isMaxSizeee = false;
     loopPath_1.default.loopPathMap.clear();
 }
 exports["default"] = initGlobalThis;
+
+
+/***/ }),
+/* 200 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const t = __webpack_require__(8);
+const handleTsAst_1 = __webpack_require__(185);
+exports["default"] = {
+    TryStatement(TryStatement, returnBullet) {
+        let returnStatement;
+        if (TryStatement) {
+            TryStatement.forEach((TryStatement) => {
+                if (returnStatement = handleTsAst_1.default.ReturnStatement(TryStatement.block)) {
+                    returnBullet = returnBullet.concat(returnStatement);
+                }
+            });
+        }
+        return returnBullet;
+    },
+    SwitchStatement(SwitchStatement, returnBullet) {
+        SwitchStatement?.forEach(switchState => {
+            const { cases } = switchState;
+            if (Array.isArray(cases)) {
+                cases.forEach((body) => {
+                    const returnStatement = body.consequent?.find(state => t.isReturnStatement(state));
+                    if (returnStatement) {
+                        returnBullet.push(returnStatement);
+                    }
+                });
+            }
+        });
+        return returnBullet;
+    },
+    IfStatement(IfStatement, returnBullet) {
+        let returnStatement;
+        IfStatement.forEach((IfStatement) => {
+            let { alternate, consequent } = IfStatement;
+            let ifStatementBodyNoode = alternate;
+            while (((alternate = alternate?.alternate), alternate)) {
+                ifStatementBodyNoode = alternate;
+            }
+            if (ifStatementBodyNoode &&
+                (returnStatement = handleTsAst_1.default.ReturnStatement(ifStatementBodyNoode))) {
+                returnBullet = returnBullet.concat(returnStatement);
+            }
+            ifStatementBodyNoode = consequent;
+            while (((consequent = consequent?.consequent), consequent)) {
+                ifStatementBodyNoode = consequent;
+            }
+            if (ifStatementBodyNoode &&
+                (returnStatement = handleTsAst_1.default.ReturnStatement(ifStatementBodyNoode))) {
+                returnBullet = returnBullet.concat(returnStatement);
+            }
+        });
+        return returnBullet;
+    },
+};
+
+
+/***/ }),
+/* 201 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const vscode = __webpack_require__(1);
+const parse_1 = __webpack_require__(2);
+const traverse_1 = __webpack_require__(4);
+const visitors_1 = __webpack_require__(182);
+const bullet_1 = __webpack_require__(189);
+const initGlobalThis_1 = __webpack_require__(199);
+exports["default"] = {
+    dedupArray(elements, mark) {
+        const dedupArray = elements.filter((ele, index) => {
+            if (mark) {
+                return elements.findIndex((e) => e[mark] === ele[mark]) === index;
+            }
+            else {
+                return elements.indexOf(ele) === index;
+            }
+        });
+        return dedupArray;
+    },
+    debounce(fn, wait, immediate) {
+        let timer;
+        return (...args) => {
+            let lastArgs = args;
+            if (immediate && !timer) {
+                timer = (function (lastThis) {
+                    return setTimeout(() => {
+                        fn.apply(lastThis, lastArgs);
+                    }, 0);
+                })(this);
+            }
+            else {
+                clearTimeout(timer);
+                timer = (function (lastThis) {
+                    return setTimeout(() => {
+                        fn.apply(lastThis, lastArgs);
+                    }, wait);
+                })(this);
+            }
+        };
+    },
+    transformAST() {
+        try {
+            bullet_1.default.clearDecorateBullet();
+            const auditor = vscode.window.activeTextEditor;
+            const code = auditor.document.getText();
+            (0, traverse_1.traverseAst)((0, parse_1.parseAst)(code), visitors_1.default);
+            bullet_1.default.renderTextDocument();
+            (0, initGlobalThis_1.default)();
+        }
+        catch (err) {
+            bullet_1.default.renderTextDocument();
+        }
+    },
+    isPadEndString(str, endMark) {
+        return str.endsWith(endMark) || str.endsWith(endMark + '.git');
+    }
+};
+
+
+/***/ }),
+/* 202 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const vscode = __webpack_require__(1);
+const utils_1 = __webpack_require__(201);
+globalThis.loopPathLimit = 15;
+class CoreTypeAst {
+    constructor() {
+        this.EventListenersMap = [];
+        this.transformAST = (textEditor) => {
+            if (utils_1.default.isPadEndString(textEditor?.uri?._fsPath || '', '.ts')) {
+                utils_1.default.transformAST();
+            }
+        };
+        this.transformASTActiveEditor = (textEditor) => {
+            if (utils_1.default.isPadEndString(textEditor?.document?.uri?._fsPath || '', '.ts')) {
+                utils_1.default.transformAST();
+            }
+        };
+    }
+    install() {
+        this.EventListenersMap.push(vscode.workspace.onDidChangeTextDocument(this.transformAST), vscode.workspace.onDidOpenTextDocument(this.transformAST), vscode.window.onDidChangeActiveTextEditor(this.transformASTActiveEditor));
+    }
+    deactivate() {
+        let task;
+        while (task = this.EventListenersMap.shift()) {
+            task?.dispose?.();
+        }
+    }
+}
+exports["default"] = CoreTypeAst;
 
 
 /***/ })
@@ -46696,21 +46960,16 @@ var exports = __webpack_exports__;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.deactivate = exports.activate = void 0;
 const vscode = __webpack_require__(1);
-const parse_1 = __webpack_require__(2);
-const traverse_1 = __webpack_require__(4);
-const visitors_1 = __webpack_require__(182);
-const bullet_1 = __webpack_require__(188);
-const initGlobalThis_1 = __webpack_require__(199);
-globalThis.loopPathLimit = 15;
+const core_1 = __webpack_require__(202);
+const coreTypeAst = new core_1.default();
+coreTypeAst.install();
 function activate(context) {
-    const auditor = vscode.window.activeTextEditor;
-    const code = auditor.document.getText();
-    (0, traverse_1.traverseAst)((0, parse_1.parseAst)(code), visitors_1.default);
-    bullet_1.default.renderTextDocument();
-    (0, initGlobalThis_1.default)();
+    coreTypeAst.transformAST(vscode.window.activeTextEditor.document);
 }
 exports.activate = activate;
-function deactivate() { }
+function deactivate() {
+    coreTypeAst.deactivate();
+}
 exports.deactivate = deactivate;
 
 })();

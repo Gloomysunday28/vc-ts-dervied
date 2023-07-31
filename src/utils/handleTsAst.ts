@@ -3,8 +3,9 @@ import handleTsAstMaps from "./handleTsAstMaps";
 import type { TSType, TSPropertySignature, TSUnionType, Node } from "@babel/types";
 import { UnionFlowType, SureFlowType } from "../interface";
 import * as t from "@babel/types";
-import loopPath from '../utils/helpers/loopPath'
-import type { IdentifierOptions } from '../interface/handleAst'
+import loopPath from '../utils/helpers/loopPath';
+import getReturnStatement from "./helpers/getReturnStatement";
+import type { IdentifierOptions } from '../interface/handleAst';
 
 // 当tsAstTypes收集到所有类型后, 开始做预后联合，将重复属性拼凑为联合类型
 const postmathClassMethodTsAst = (tsAstTypes: TSType[]) => {
@@ -67,14 +68,13 @@ export const handlePath = (referencePath, tsAstTypes, options?: IdentifierOption
     if (options?.isReturnStatement) {
       if (node.typeAnnotation) {
         tsAstTypes.push(node.typeAnnotation);
-        collectTSLock = true
       } else if (t.isVariableDeclarator(node) && (node.id as any)?.typeAnnotation) {
         const { id } = node
         tsAstTypes.push((id as any).typeAnnotation);
-        collectTSLock = true
       } else if (handleTsAstMaps[node.type]) {
-        handleTsAstMaps[node.type]?.(node, tsAstTypes, referencePath?.path);
+        handleTsAstMaps[node.type]?.(node, tsAstTypes, referencePath?.path, options);
       }
+      collectTSLock = true;
     } else if (handleTsAstMaps[node.type]) {
       handleTsAstMaps[node.type]?.(node, tsAstTypes, referencePath?.path);
     }
@@ -115,20 +115,20 @@ export default {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   Identifier: (bindScopePath, tsAstTypes, options?: IdentifierOptions) => {
     if (!bindScopePath) {
-      return t.tsUnknownKeyword()
+      return t.tsUnknownKeyword();
     }
     if (loopPath(bindScopePath.identifier)) {
       return handlePath(bindScopePath, tsAstTypes, options);
     } else {
       globalThis.isMaxSizeee = bindScopePath.identifier.name // 爆栈
-      return t.tsUnknownKeyword()
+      return t.tsUnknownKeyword();
     }
   },
   /**
    * @description 获取ReturnStatement
    * @param node Node
    */
-  ReturnStatement(node: t.FunctionDeclaration['body'], returnBullet = []) {
+  ReturnStatement(node: t.FunctionDeclaration['body'], returnBullet = []): t.ReturnStatement[] {
     const { body } = node;
     let returnStatement: Node;
     if (
@@ -139,31 +139,19 @@ export default {
       returnBullet.push(returnStatement as t.ReturnStatement);
     }
 
-    const TryStatement = body?.find((node: Node) => t.isTryStatement(node)) as t.TryStatement;
+    const TryStatement = body?.filter((node: Node) => t.isTryStatement(node)) as t.TryStatement[];
     if (TryStatement) {
-      if (returnStatement = this.ReturnStatement(TryStatement.block)) {
-        returnBullet = returnBullet.concat(returnStatement as t.ReturnStatement);
-      }
+      returnBullet = getReturnStatement.TryStatement(TryStatement, returnBullet)
     }
 
-    const IfStatement = body?.find((node: Node) => t.isIfStatement(node)) as t.IfStatement;
-    if (IfStatement) {
-      let { alternate, consequent } = IfStatement;
-      let ifStatementBodyNoode = alternate;
-      while ((alternate = (alternate as any)?.alternate, alternate)) {
-        ifStatementBodyNoode = alternate;
-      }
-      if (ifStatementBodyNoode && (returnStatement = this.ReturnStatement(ifStatementBodyNoode))) {
-        returnBullet = returnBullet.concat(returnStatement as t.ReturnStatement);
-      }
+    const IfStatement = body?.filter((node: Node) => t.isIfStatement(node)) as t.IfStatement[];
+    if (IfStatement?.length) {
+      returnBullet = getReturnStatement.IfStatement(IfStatement, returnBullet)
+    }
 
-      ifStatementBodyNoode = consequent
-      while ((consequent = (consequent as any)?.consequent, consequent)) {
-        ifStatementBodyNoode = consequent;
-      }
-      if (ifStatementBodyNoode && (returnStatement = this.ReturnStatement(ifStatementBodyNoode))) {
-        returnBullet = returnBullet.concat(returnStatement as t.ReturnStatement);
-      }
+    const SwitchStatement = body?.filter((node: Node) => t.isSwitchStatement(node)) as t.SwitchStatement[];
+    if (SwitchStatement?.length) {
+      returnBullet = getReturnStatement.SwitchStatement(SwitchStatement, returnBullet);
     }
 
     return returnBullet;
