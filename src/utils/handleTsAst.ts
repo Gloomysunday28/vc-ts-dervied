@@ -1,4 +1,4 @@
-import { curdGenerateTsAstMaps } from "./generateTsAstMaps";
+import { curdGenerateTsAstMaps, generateTsTypeMaps } from "./generateTsAstMaps";
 import handleTsAstMaps from "./handleTsAstMaps";
 import type { TSType, TSPropertySignature, TSUnionType, Node } from "@babel/types";
 import { UnionFlowType, SureFlowType } from "../interface";
@@ -128,8 +128,13 @@ export default {
    * @description 获取ReturnStatement
    * @param node Node
    */
-  ReturnStatement(node: t.FunctionDeclaration['body'], returnBullet = []): t.ReturnStatement[] {
+  ReturnStatement<T extends t.ReturnStatement>(node: t.FunctionDeclaration['body'], path, returnBullet = []): Array<T> {
     const { body } = node;
+    if (!body && node.type) {
+      returnBullet.push({
+        bulletTypeAnnotation: generateTsTypeMaps[node.type]?.(node, path)
+      })
+    }
     let returnStatement: Node;
     if (
       (returnStatement = body?.find((node: Node) =>
@@ -141,12 +146,12 @@ export default {
 
     const TryStatement = body?.filter((node: Node) => t.isTryStatement(node)) as t.TryStatement[];
     if (TryStatement) {
-      returnBullet = getReturnStatement.TryStatement(TryStatement, returnBullet)
+      returnBullet = getReturnStatement.TryStatement(TryStatement, path, returnBullet)
     }
 
     const IfStatement = body?.filter((node: Node) => t.isIfStatement(node)) as t.IfStatement[];
     if (IfStatement?.length) {
-      returnBullet = getReturnStatement.IfStatement(IfStatement, returnBullet)
+      returnBullet = getReturnStatement.IfStatement(IfStatement, path, returnBullet)
     }
 
     const SwitchStatement = body?.filter((node: Node) => t.isSwitchStatement(node)) as t.SwitchStatement[];

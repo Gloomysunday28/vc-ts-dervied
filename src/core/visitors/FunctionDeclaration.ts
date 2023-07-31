@@ -30,7 +30,7 @@ function typePromiseOrAnnotation(
         if (anotation.type === "TSUnionType") {
           // @ts-ignore
           (anotation as t.TSUnionType).typeAnnotation.types = (
-            anotation as t.TSUnionType
+            anotation as any
           ).typeAnnotation?.types.filter((type) => type.type !== "TSUnionType");
           return anotation.typeAnnotation;
         }
@@ -57,6 +57,8 @@ function typePromiseOrAnnotation(
     } else if (t.isTSTypeAnnotation(tsTypeAnotation.typeAnnotation)) {
       annotation = (tsTypeAnotation.typeAnnotation as t.TSTypeAnnotation)
         .typeAnnotation;
+    } else if (!annotation) {
+      annotation = tsTypeAnotation
     }
   }
 
@@ -73,19 +75,26 @@ function typePromiseOrAnnotation(
 }
 
 const FunctionDeclaration =
-  "FunctionDeclaration|ArrowFunctionExpression|ClassMethod";
+  "FunctionDeclaration|ArrowFunctionExpression|ClassMethod|ObjectMethod";
 
 function traverseFunctionDeclartion(path) {
   if (path.node.returnType) {
     return path.skip();
   }
   const { body, async, id } = path.node;
-  const returnAstNode = handleTsAst.ReturnStatement(body);
+  const returnAstNode = handleTsAst.ReturnStatement(body, path);
   try {
     if (returnAstNode.length) {
       const tsTypes = returnAstNode?.map((returnAstNode) => {
         try {
           const { argument } = returnAstNode || {};
+
+          if ((returnAstNode as any).bulletTypeAnnotation) {
+            return {
+              content: (returnAstNode as any).bulletTypeAnnotation,
+              type: (returnAstNode as any).bulletTypeAnnotation.type
+            }
+          }
 
           if (t.isIdentifier(argument)) {
             const bindScopePath = path.scope.bindings[argument.name];

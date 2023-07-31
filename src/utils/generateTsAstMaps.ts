@@ -56,6 +56,13 @@ const generateTsTypeMap: {
   TSBooleanKeyword: (node: UnionFlowType<Node, "BooleanLiteral">) => {
     return node ? t.tsLiteralType(node) : t.TSBooleanKeyword();
   },
+  TSLiteralType: (node: UnionFlowType<Node, 'TSLiteralType'>, path) => {
+    const { literal } = node
+
+    if (literal) {
+      return generateTsTypeMap[literal.type](literal, path)
+    }
+  },
   ParamterDeclaration: (params: UnionFlowType<Node, "Identifier">[]) => {
     return t.typeParameterDeclaration(
       params.map((param) =>

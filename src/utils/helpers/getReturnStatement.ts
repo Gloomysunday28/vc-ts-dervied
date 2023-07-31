@@ -2,12 +2,12 @@ import * as t from "@babel/types";
 import handleTsAst from "../handleTsAst";
 
 export default {
-  TryStatement(TryStatement: t.TryStatement[], returnBullet: t.ReturnStatement[]) {
+  TryStatement(TryStatement: t.TryStatement[], path, returnBullet: t.ReturnStatement[]) {
     let returnStatement: t.Node[];
 
     if (TryStatement) {
       TryStatement.forEach((TryStatement) => {
-        if (returnStatement = handleTsAst.ReturnStatement(TryStatement.block)) {
+        if (returnStatement = handleTsAst.ReturnStatement(TryStatement.block, path)) {
           returnBullet = returnBullet.concat(returnStatement as t.ReturnStatement[]);
         }
       })
@@ -32,6 +32,7 @@ export default {
   },
   IfStatement(
     IfStatement: t.IfStatement[],
+    path,
     returnBullet: t.ReturnStatement[]
   ): t.ReturnStatement[] {
     let returnStatement: t.Node[];
@@ -43,7 +44,7 @@ export default {
       }
       if (
         ifStatementBodyNoode &&
-        (returnStatement = handleTsAst.ReturnStatement((ifStatementBodyNoode as t.FunctionDeclaration['body'])))
+        (returnStatement = handleTsAst.ReturnStatement((ifStatementBodyNoode as t.FunctionDeclaration['body']), path))
       ) {
         returnBullet = returnBullet.concat(
           returnStatement as t.ReturnStatement[]
@@ -56,7 +57,7 @@ export default {
       }
       if (
         ifStatementBodyNoode &&
-        (returnStatement = handleTsAst.ReturnStatement((ifStatementBodyNoode as t.FunctionDeclaration['body'])))
+        (returnStatement = handleTsAst.ReturnStatement((ifStatementBodyNoode as t.FunctionDeclaration['body']), path))
       ) {
         returnBullet = returnBullet.concat(
           returnStatement as t.ReturnStatement[]

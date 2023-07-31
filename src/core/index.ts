@@ -10,13 +10,13 @@ export default class CoreTypeAst {
       utils.transformAST();
     }
   };
-  transformASTActiveEditor = (textEditor) => {
+  transformASTActiveEditor = utils.debounce((textEditor) => {
     if (utils.isPadEndString(textEditor?.document?.uri?._fsPath || '', '.ts')) {
       utils.transformAST();
     }
-  };
+  }, 300);
   install() {
-    this.EventListenersMap.push(vscode.workspace.onDidChangeTextDocument(this.transformAST), vscode.workspace.onDidOpenTextDocument(this.transformAST), vscode.window.onDidChangeActiveTextEditor(this.transformASTActiveEditor));
+    this.EventListenersMap.push(vscode.workspace.onDidChangeTextDocument(this.transformASTActiveEditor), vscode.workspace.onDidOpenTextDocument(this.transformAST), vscode.window.onDidChangeActiveTextEditor(this.transformASTActiveEditor));
   }
   deactivate() {
     let task: Disposable;
