@@ -17,7 +17,7 @@ export const unionUtils = {
         return {
           typeAnnotation: t.tsUnionType(tsyTypes.map(params => t.isTSTypeAnnotation(params.typeAnnotation) ? params.typeAnnotation.typeAnnotation : params.typeAnnotation)),
           isMaxSizeee: tsyTypes.find(t => t.isMaxSizeee)
-        }
+        };
       }
     }
   },

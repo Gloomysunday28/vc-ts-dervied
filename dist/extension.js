@@ -46933,16 +46933,20 @@ globalThis.loopPathLimit = 15;
 class CoreTypeAst {
     constructor() {
         this.EventListenersMap = [];
+        this.fileExt = ['ts', 'tsx', 'vue', 'js'];
         this.transformAST = (textEditor) => {
-            if (utils_1.default.isPadEndString(textEditor?.uri?._fsPath || '', '.ts') || utils_1.default.isPadEndString(textEditor?.uri?._fsPath || '', '.tsx')) {
+            if (this.fileToTransform(textEditor?.uri?._fsPath || '')) {
                 utils_1.default.transformAST();
             }
         };
         this.transformASTActiveEditor = utils_1.default.debounce((textEditor) => {
-            if (utils_1.default.isPadEndString(textEditor?.document?.uri?._fsPath || '', '.ts') || utils_1.default.isPadEndString(textEditor?.uri?._fsPath || '', '.tsx')) {
+            if (this.fileToTransform(textEditor?.document?.uri?._fsPath || '')) {
                 utils_1.default.transformAST();
             }
         }, 300);
+    }
+    fileToTransform(file) {
+        return this.fileExt.some(ext => utils_1.default.isPadEndString(file, ext));
     }
     install() {
         this.EventListenersMap.push(vscode.workspace.onDidChangeTextDocument(this.transformASTActiveEditor), vscode.workspace.onDidOpenTextDocument(this.transformAST), vscode.window.onDidChangeActiveTextEditor(this.transformASTActiveEditor));

@@ -5,13 +5,17 @@ import type { Disposable } from 'vscode';
 globalThis.loopPathLimit = 15;
 export default class CoreTypeAst {
   EventListenersMap: Disposable[] = [];
+  fileExt = ['ts', 'tsx', 'vue', 'js'];
+  fileToTransform(file) {
+    return this.fileExt.some(ext => utils.isPadEndString(file, ext));
+  }
   transformAST = (textEditor) => {
-    if (utils.isPadEndString(textEditor?.uri?._fsPath || '', '.ts') || utils.isPadEndString(textEditor?.uri?._fsPath || '', '.tsx')) {
+    if (this.fileToTransform(textEditor?.uri?._fsPath || '')) {
       utils.transformAST();
     }
   };
   transformASTActiveEditor = utils.debounce((textEditor) => {
-    if (utils.isPadEndString(textEditor?.document?.uri?._fsPath || '', '.ts') || utils.isPadEndString(textEditor?.uri?._fsPath || '', '.tsx')) {
+    if (this.fileToTransform(textEditor?.document?.uri?._fsPath || '')) {
       utils.transformAST();
     }
   }, 300);
