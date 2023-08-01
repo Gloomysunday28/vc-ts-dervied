@@ -1,11 +1,14 @@
 {
   "name": "t-typescript-auto-derive",
-  "displayName": "t typescript-auto-derive",
+  "displayName": "Typescript-Auto-Derive",
   "description": "",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "publisher": "mrCai",
   "engines": {
     "vscode": "^1.80.0"
   },
+  "author": "Martin.cai",
+  "repository": "https://github.com/Gloomysunday28/vc-ts-dervied",
   "categories": [
     "Other"
   ],
@@ -13,14 +16,6 @@
     "onLanguage:typescript"
   ],
   "main": "./dist/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "t-typescript-auto-derive.helloWorld",
-        "title": "Hello Martin"
-      }
-    ]
-  },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
     "compile": "webpack",
@@ -30,7 +25,8 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "publish": "vsce publish"
   },
   "devDependencies": {
     "@babel/core": "^7.22.5",
@@ -56,6 +52,7 @@
     "webpack-cli": "^5.1.1"
   },
   "dependencies": {
-    "@babel/helper-plugin-utils": "^7.22.5"
+    "@babel/helper-plugin-utils": "^7.22.5",
+    "vsce": "^2.15.0"
   }
 }
