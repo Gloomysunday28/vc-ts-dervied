@@ -45532,13 +45532,13 @@ exports["default"] = {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const generateTsAstMaps_1 = __webpack_require__(184);
 const handleTsAst_1 = __webpack_require__(185);
-const bullet_1 = __webpack_require__(188);
+const bullet_1 = __webpack_require__(189);
 const generate = __webpack_require__(115);
 const vscode = __webpack_require__(1);
 const t = __webpack_require__(8);
-const generic_1 = __webpack_require__(192);
-const unknown_1 = __webpack_require__(193);
-const union_1 = __webpack_require__(197);
+const generic_1 = __webpack_require__(193);
+const unknown_1 = __webpack_require__(197);
+const union_1 = __webpack_require__(198);
 function typePromiseOrAnnotation(tsTypeAnotation, async) {
     let annotation;
     if (Array.isArray(tsTypeAnotation)) {
@@ -45677,10 +45677,10 @@ exports["default"] = default_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.baseTsAstMaps = exports.curdGenerateTsAstMaps = exports.generateTsTypeMaps = void 0;
 const handleTsAst_1 = __webpack_require__(185);
-const operator_1 = __webpack_require__(194);
+const operator_1 = __webpack_require__(188);
 const t = __webpack_require__(8);
 const es_1 = __webpack_require__(195);
-const union_1 = __webpack_require__(197);
+const union_1 = __webpack_require__(198);
 //  js类型与Flow ast映射关系 只针对该类型生成TSType
 const generateTsTypeMap = {
     undefined: t.tsVoidKeyword,
@@ -45937,6 +45937,7 @@ const generateTsTypeMap = {
                 return t.tsUnionType(tsyTypes);
             }
         }
+        return t.tsUnknownKeyword();
     },
     /**
      *
@@ -46016,8 +46017,8 @@ const generateTsAstMaps_1 = __webpack_require__(184);
 const handleTsAstMaps_1 = __webpack_require__(186);
 const interface_1 = __webpack_require__(187);
 const t = __webpack_require__(8);
-const loopPath_1 = __webpack_require__(198);
-const getReturnStatement_1 = __webpack_require__(202);
+const loopPath_1 = __webpack_require__(194);
+const getReturnStatement_1 = __webpack_require__(200);
 // 当tsAstTypes收集到所有类型后, 开始做预后联合，将重复属性拼凑为联合类型
 const postmathClassMethodTsAst = (tsAstTypes) => {
     const redundancFlowMap = new Map();
@@ -46262,10 +46263,37 @@ exports.SureFlowType = SureFlowType;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+const generateTsAstMaps_1 = __webpack_require__(184);
+const t = __webpack_require__(8);
+exports["default"] = {
+    numberOperator: ['+', '-', '*', '**', '/', '%', '&', '|', '>>', '>>>', '<<', '^'],
+    booleanOperator: ["==", "===", "!=", "!==", "in", "instanceof", ">", "<", ">=", "<=", ",>"],
+    expressionOperator: ['||', '&&', '??'],
+    operatorType(operator, node, path) {
+        if (this.numberOperator.includes(operator)) {
+            return 'NumericLiteral';
+        }
+        else if (this.booleanOperator.includes(operator)) {
+            return 'BooleanLiteral';
+        }
+        else if (this.expressionOperator.includes(operator)) {
+            return t.tsUnionType([generateTsAstMaps_1.generateTsTypeMaps[node.left.type]?.(node.left, path) || t.tsUnknownKeyword(), generateTsAstMaps_1.generateTsTypeMaps[node.right.type]?.(node.right, path) || t.tsUnknownKeyword()]);
+        }
+    }
+};
+
+
+/***/ }),
+/* 189 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 const vscode = __webpack_require__(1);
-const format_1 = __webpack_require__(189);
-const string_1 = __webpack_require__(190);
-const author_1 = __webpack_require__(191);
+const format_1 = __webpack_require__(190);
+const string_1 = __webpack_require__(191);
+const author_1 = __webpack_require__(192);
 class Bullet {
     constructor() {
         this.lineCount = 0;
@@ -46330,7 +46358,7 @@ exports["default"] = new Bullet();
 
 
 /***/ }),
-/* 189 */
+/* 190 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -46359,7 +46387,7 @@ exports["default"] = new Format();
 
 
 /***/ }),
-/* 190 */
+/* 191 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -46385,7 +46413,7 @@ exports["default"] = {
 
 
 /***/ }),
-/* 191 */
+/* 192 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -46401,13 +46429,13 @@ exports["default"] = `
 
 
 /***/ }),
-/* 192 */
+/* 193 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const string_1 = __webpack_require__(190);
+const string_1 = __webpack_require__(191);
 exports["default"] = {
     AsyncGeneric(generic, async) {
         return `${async ? 'Promise<' : ''}${string_1.default.uppcase(generic)}${async ? '>' : ''}`;
@@ -46416,54 +46444,22 @@ exports["default"] = {
 
 
 /***/ }),
-/* 193 */
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const generic_1 = __webpack_require__(192);
-const bullet_1 = __webpack_require__(188);
-const vscode = __webpack_require__(1);
-exports["default"] = {
-    getUnkonwnTSType(path, async, unknownMark = '?') {
-        const { node } = path;
-        const { id } = node;
-        bullet_1.default.addDecorateBullet({
-            content: async ? `: Promise<${unknownMark}>` : `: ${unknownMark}`,
-            type: "?",
-            name: generic_1.default.AsyncGeneric(id?.name || path?.parent?.id?.name || "Anonymous", async),
-            position: new vscode.Position(node.body.loc.start.line - 1, node.body.loc.start.column),
-        });
-    }
-};
-
-
-/***/ }),
 /* 194 */
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const generateTsAstMaps_1 = __webpack_require__(184);
-const t = __webpack_require__(8);
-exports["default"] = {
-    numberOperator: ['+', '-', '*', '**', '/', '%', '&', '|', '>>', '>>>', '<<', '^'],
-    booleanOperator: ["==", "===", "!=", "!==", "in", "instanceof", ">", "<", ">=", "<=", ",>"],
-    expressionOperator: ['||', '&&', '??'],
-    operatorType(operator, node, path) {
-        if (this.numberOperator.includes(operator)) {
-            return 'NumericLiteral';
-        }
-        else if (this.booleanOperator.includes(operator)) {
-            return 'BooleanLiteral';
-        }
-        else if (this.expressionOperator.includes(operator)) {
-            return t.tsUnionType([generateTsAstMaps_1.generateTsTypeMaps[node.left.type]?.(node.left, path) || t.tsUnknownKeyword(), generateTsAstMaps_1.generateTsTypeMaps[node.right.type]?.(node.right, path) || t.tsUnknownKeyword()]);
-        }
+loopPath.loopPathMap = new Map([]);
+function loopPath(node) {
+    const count = loopPath.loopPathMap.get(node.name) || 0;
+    if (count < globalThis.loopPathLimit) {
+        loopPath.loopPathMap.set(node.name, count + 1);
+        return true;
     }
-};
+    return false;
+}
+exports["default"] = loopPath;
 
 
 /***/ }),
@@ -46696,6 +46692,30 @@ exports.EsTSUtils = {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+const generic_1 = __webpack_require__(193);
+const bullet_1 = __webpack_require__(189);
+const vscode = __webpack_require__(1);
+exports["default"] = {
+    getUnkonwnTSType(path, async, unknownMark = '?') {
+        const { node } = path;
+        const { id } = node;
+        bullet_1.default.addDecorateBullet({
+            content: async ? `: Promise<${unknownMark}>` : `: ${unknownMark}`,
+            type: "?",
+            name: generic_1.default.AsyncGeneric(id?.name || path?.parent?.id?.name || "Anonymous", async),
+            position: new vscode.Position(node.body.loc.start.line - 1, node.body.loc.start.column),
+        });
+    }
+};
+
+
+/***/ }),
+/* 198 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.unionUtils = void 0;
 const t = __webpack_require__(8);
 const __1 = __webpack_require__(201);
@@ -46734,32 +46754,13 @@ exports.unionUtils = {
 
 
 /***/ }),
-/* 198 */
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-loopPath.loopPathMap = new Map([]);
-function loopPath(node) {
-    const count = loopPath.loopPathMap.get(node.name) || 0;
-    if (count < globalThis.loopPathLimit) {
-        loopPath.loopPathMap.set(node.name, count + 1);
-        return true;
-    }
-    return false;
-}
-exports["default"] = loopPath;
-
-
-/***/ }),
 /* 199 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const loopPath_1 = __webpack_require__(198);
+const loopPath_1 = __webpack_require__(194);
 function initGlobalThis() {
     globalThis.isMaxSizeee = false;
     loopPath_1.default.loopPathMap.clear();
@@ -46774,34 +46775,58 @@ exports["default"] = initGlobalThis;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const vscode = __webpack_require__(1);
-const utils_1 = __webpack_require__(201);
-globalThis.loopPathLimit = 15;
-class CoreTypeAst {
-    constructor() {
-        this.EventListenersMap = [];
-        this.transformAST = (textEditor) => {
-            if (utils_1.default.isPadEndString(textEditor?.uri?._fsPath || '', '.ts')) {
-                utils_1.default.transformAST();
-            }
-        };
-        this.transformASTActiveEditor = utils_1.default.debounce((textEditor) => {
-            if (utils_1.default.isPadEndString(textEditor?.document?.uri?._fsPath || '', '.ts')) {
-                utils_1.default.transformAST();
-            }
-        }, 300);
-    }
-    install() {
-        this.EventListenersMap.push(vscode.workspace.onDidChangeTextDocument(this.transformASTActiveEditor), vscode.workspace.onDidOpenTextDocument(this.transformAST), vscode.window.onDidChangeActiveTextEditor(this.transformASTActiveEditor));
-    }
-    deactivate() {
-        let task;
-        while (task = this.EventListenersMap.shift()) {
-            task?.dispose?.();
+const t = __webpack_require__(8);
+const handleTsAst_1 = __webpack_require__(185);
+exports["default"] = {
+    TryStatement(TryStatement, path, returnBullet) {
+        let returnStatement;
+        if (TryStatement) {
+            TryStatement.forEach((TryStatement) => {
+                if (returnStatement = handleTsAst_1.default.ReturnStatement(TryStatement.block, path)) {
+                    returnBullet = returnBullet.concat(returnStatement);
+                }
+            });
         }
-    }
-}
-exports["default"] = CoreTypeAst;
+        return returnBullet;
+    },
+    SwitchStatement(SwitchStatement, returnBullet) {
+        SwitchStatement?.forEach(switchState => {
+            const { cases } = switchState;
+            if (Array.isArray(cases)) {
+                cases.forEach((body) => {
+                    const returnStatement = body.consequent?.find(state => t.isReturnStatement(state));
+                    if (returnStatement) {
+                        returnBullet.push(returnStatement);
+                    }
+                });
+            }
+        });
+        return returnBullet;
+    },
+    IfStatement(IfStatement, path, returnBullet) {
+        let returnStatement;
+        IfStatement.forEach((IfStatement) => {
+            let { alternate, consequent } = IfStatement;
+            let ifStatementBodyNoode = alternate;
+            while (((alternate = alternate?.alternate), alternate)) {
+                ifStatementBodyNoode = alternate;
+            }
+            if (ifStatementBodyNoode &&
+                (returnStatement = handleTsAst_1.default.ReturnStatement(ifStatementBodyNoode, path))) {
+                returnBullet = returnBullet.concat(returnStatement);
+            }
+            ifStatementBodyNoode = consequent;
+            while (((consequent = consequent?.consequent), consequent)) {
+                ifStatementBodyNoode = consequent;
+            }
+            if (ifStatementBodyNoode &&
+                (returnStatement = handleTsAst_1.default.ReturnStatement(ifStatementBodyNoode, path))) {
+                returnBullet = returnBullet.concat(returnStatement);
+            }
+        });
+        return returnBullet;
+    },
+};
 
 
 /***/ }),
@@ -46815,7 +46840,7 @@ const vscode = __webpack_require__(1);
 const parse_1 = __webpack_require__(2);
 const traverse_1 = __webpack_require__(4);
 const visitors_1 = __webpack_require__(182);
-const bullet_1 = __webpack_require__(188);
+const bullet_1 = __webpack_require__(189);
 const initGlobalThis_1 = __webpack_require__(199);
 exports["default"] = {
     dedupArray(elements, mark) {
@@ -46876,58 +46901,34 @@ exports["default"] = {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const t = __webpack_require__(8);
-const handleTsAst_1 = __webpack_require__(185);
-exports["default"] = {
-    TryStatement(TryStatement, path, returnBullet) {
-        let returnStatement;
-        if (TryStatement) {
-            TryStatement.forEach((TryStatement) => {
-                if (returnStatement = handleTsAst_1.default.ReturnStatement(TryStatement.block, path)) {
-                    returnBullet = returnBullet.concat(returnStatement);
-                }
-            });
+const vscode = __webpack_require__(1);
+const utils_1 = __webpack_require__(201);
+globalThis.loopPathLimit = 15;
+class CoreTypeAst {
+    constructor() {
+        this.EventListenersMap = [];
+        this.transformAST = (textEditor) => {
+            if (utils_1.default.isPadEndString(textEditor?.uri?._fsPath || '', '.ts')) {
+                utils_1.default.transformAST();
+            }
+        };
+        this.transformASTActiveEditor = utils_1.default.debounce((textEditor) => {
+            if (utils_1.default.isPadEndString(textEditor?.document?.uri?._fsPath || '', '.ts')) {
+                utils_1.default.transformAST();
+            }
+        }, 300);
+    }
+    install() {
+        this.EventListenersMap.push(vscode.workspace.onDidChangeTextDocument(this.transformASTActiveEditor), vscode.workspace.onDidOpenTextDocument(this.transformAST), vscode.window.onDidChangeActiveTextEditor(this.transformASTActiveEditor));
+    }
+    deactivate() {
+        let task;
+        while (task = this.EventListenersMap.shift()) {
+            task?.dispose?.();
         }
-        return returnBullet;
-    },
-    SwitchStatement(SwitchStatement, returnBullet) {
-        SwitchStatement?.forEach(switchState => {
-            const { cases } = switchState;
-            if (Array.isArray(cases)) {
-                cases.forEach((body) => {
-                    const returnStatement = body.consequent?.find(state => t.isReturnStatement(state));
-                    if (returnStatement) {
-                        returnBullet.push(returnStatement);
-                    }
-                });
-            }
-        });
-        return returnBullet;
-    },
-    IfStatement(IfStatement, path, returnBullet) {
-        let returnStatement;
-        IfStatement.forEach((IfStatement) => {
-            let { alternate, consequent } = IfStatement;
-            let ifStatementBodyNoode = alternate;
-            while (((alternate = alternate?.alternate), alternate)) {
-                ifStatementBodyNoode = alternate;
-            }
-            if (ifStatementBodyNoode &&
-                (returnStatement = handleTsAst_1.default.ReturnStatement(ifStatementBodyNoode, path))) {
-                returnBullet = returnBullet.concat(returnStatement);
-            }
-            ifStatementBodyNoode = consequent;
-            while (((consequent = consequent?.consequent), consequent)) {
-                ifStatementBodyNoode = consequent;
-            }
-            if (ifStatementBodyNoode &&
-                (returnStatement = handleTsAst_1.default.ReturnStatement(ifStatementBodyNoode, path))) {
-                returnBullet = returnBullet.concat(returnStatement);
-            }
-        });
-        return returnBullet;
-    },
-};
+    }
+}
+exports["default"] = CoreTypeAst;
 
 
 /***/ })
@@ -46980,7 +46981,7 @@ var exports = __webpack_exports__;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.deactivate = exports.activate = void 0;
 const vscode = __webpack_require__(1);
-const core_1 = __webpack_require__(200);
+const core_1 = __webpack_require__(202);
 const coreTypeAst = new core_1.default();
 coreTypeAst.install();
 function activate(context) {

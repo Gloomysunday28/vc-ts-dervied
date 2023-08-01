@@ -93,7 +93,7 @@ function traverseFunctionDeclartion(path) {
             return {
               content: (returnAstNode as any).bulletTypeAnnotation,
               type: (returnAstNode as any).bulletTypeAnnotation.type
-            }
+            };
           }
 
           if (t.isIdentifier(argument)) {

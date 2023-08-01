@@ -392,6 +392,8 @@ const generateTsTypeMap: {
         return t.tsUnionType(tsyTypes)
       }
     }
+
+    return t.tsUnknownKeyword()
   },
   /**
    * 
@@ -404,7 +406,7 @@ const generateTsTypeMap: {
     if ((node as CallExpression).typeParameters) {
       return unionUtils.UnionType((node as CallExpression).typeParameters.params)
     }
-    
+
     let buildASTRequire = t.tsUnknownKeyword()
     try {
       buildASTRequire = generateTsTypeMaps[callee.type]?.(callee, path);
