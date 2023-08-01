@@ -6,12 +6,12 @@ globalThis.loopPathLimit = 15;
 export default class CoreTypeAst {
   EventListenersMap: Disposable[] = [];
   transformAST = (textEditor) => {
-    if (utils.isPadEndString(textEditor?.uri?._fsPath || '', '.ts')) {
+    if (utils.isPadEndString(textEditor?.uri?._fsPath || '', '.ts') || utils.isPadEndString(textEditor?.uri?._fsPath || '', '.tsx')) {
       utils.transformAST();
     }
   };
   transformASTActiveEditor = utils.debounce((textEditor) => {
-    if (utils.isPadEndString(textEditor?.document?.uri?._fsPath || '', '.ts')) {
+    if (utils.isPadEndString(textEditor?.document?.uri?._fsPath || '', '.ts') || utils.isPadEndString(textEditor?.uri?._fsPath || '', '.tsx')) {
       utils.transformAST();
     }
   }, 300);

@@ -17,12 +17,16 @@ import { unionUtils } from "../../utils/helpers/union";
  */
 interface TsTypeAnnotationTypePromiseOrAnnotation {
   typeAnnotation: TSType | TSType[];
-  isMaxSizeee: boolean;
+  isMaxSizeee?: boolean;
+  isJSXElement: boolean;
 }
 function typePromiseOrAnnotation(
   tsTypeAnotation: TsTypeAnnotationTypePromiseOrAnnotation,
   async: boolean
 ) {
+  if (tsTypeAnotation.isJSXElement) {
+    return async ? ": Promise<React.Element>" : ": React.Element";
+  }
   let annotation;
   if (Array.isArray(tsTypeAnotation)) {
     annotation = tsTypeAnotation.map((anotation) => {
@@ -58,7 +62,7 @@ function typePromiseOrAnnotation(
       annotation = (tsTypeAnotation.typeAnnotation as t.TSTypeAnnotation)
         .typeAnnotation;
     } else if (!annotation) {
-      annotation = tsTypeAnotation
+      annotation = tsTypeAnotation;
     }
   }
 
@@ -92,7 +96,20 @@ function traverseFunctionDeclartion(path) {
           if ((returnAstNode as any).bulletTypeAnnotation) {
             return {
               content: (returnAstNode as any).bulletTypeAnnotation,
-              type: (returnAstNode as any).bulletTypeAnnotation.type
+              type: (returnAstNode as any).bulletTypeAnnotation.type,
+            };
+          }
+
+          if (t.isJSXElement(argument)) {
+            return {
+              content: {
+                typeAnnotation: t.memberExpression(
+                  t.identifier("React"),
+                  t.identifier("Element")
+                ),
+                isJSXElement: true,
+              },
+              type: "JSXElment",
             };
           }
 
@@ -148,7 +165,10 @@ function traverseFunctionDeclartion(path) {
       if (tsTypes.length && references) {
         bullet.addDecorateBullet({
           ...tsTypes?.[0],
-          content: generate.default(references).code,
+          content:
+            typeof references === "string"
+              ? references
+              : generate.default(references).code,
           name: generic.AsyncGeneric(
             id?.name || path?.parent?.id?.name || "Anonymous",
             async
