@@ -189,6 +189,9 @@ const generateTsTypeMap: {
       return t.objectTypeAnnotation(node);
     } else {
       const { properties } = node;
+      if (!properties.length) {
+        return t.tsTypeReference(t.identifier('Record'), t.tsTypeParameterInstantiation([t.tsStringKeyword(), t.tsAnyKeyword()]))
+      }
       return t.TSTypeLiteral(
         properties.map(
           (propert: ObjectTypeProperty | ObjectTypeSpreadProperty) => {
