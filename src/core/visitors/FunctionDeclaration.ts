@@ -83,7 +83,6 @@ const FunctionDeclaration =
   "FunctionDeclaration|ArrowFunctionExpression|ClassMethod|ObjectMethod";
 
 function traverseFunctionDeclartion(path) {
-  resolvePath;
   if (path.node.returnType) {
     return path.skip();
   }
