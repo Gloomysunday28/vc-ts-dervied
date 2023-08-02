@@ -1,6 +1,7 @@
 import { generateTsTypeMaps } from "../../utils/generateTsAstMaps";
 import handleTsAst from "../../utils/handleTsAst";
-import { type FlowType, type TSType } from "@babel/types";
+import * as resolvePath from 'path';
+import { type TSType } from "@babel/types";
 import bullet from "../render/bullet";
 import * as generate from "@babel/generator";
 import * as vscode from "vscode";
@@ -82,6 +83,7 @@ const FunctionDeclaration =
   "FunctionDeclaration|ArrowFunctionExpression|ClassMethod|ObjectMethod";
 
 function traverseFunctionDeclartion(path) {
+  resolvePath;
   if (path.node.returnType) {
     return path.skip();
   }
@@ -148,7 +150,6 @@ function traverseFunctionDeclartion(path) {
               type: returnTypeReference?.typeAnnotation?.type || "unknown",
             };
 
-            path.skip();
             return typeReference;
           }
         } catch (err) {
@@ -184,16 +185,12 @@ function traverseFunctionDeclartion(path) {
     }
   } catch (err) {
     unknownRender.getUnkonwnTSType(path, async);
-    path.skip();
+    path.skip(); // 跳过子节点循环
   }
 }
 
 export default function () {
   return {
-    [FunctionDeclaration]: {
-      enter: (path) => {
-        traverseFunctionDeclartion(path);
-      },
-    },
-  };
+    [FunctionDeclaration]: traverseFunctionDeclartion
+  }
 }
