@@ -3,6 +3,7 @@ import { generateTsTypeMaps } from '../generateTsAstMaps';
 import * as t from '@babel/types';
 import { UnionFlowType } from '../../interface';
 import { unionUtils } from './union';
+import stringUtils from './string';
 
 export default {
   numberOperator: ['+', '-', '*', '**', '/', '%', '&', '|', '>>', '>>>', '<<', '^'],
@@ -10,6 +11,11 @@ export default {
   expressionOperator: ['||', '&&', '??'],
   operatorType(operator: BinaryExpression['operator'] | LogicalExpression['operator'], node: UnionFlowType<t.Node, 'LogicalExpression'>, path) {
     if (this.numberOperator.includes(operator)) {
+      if (operator === '+') {
+        const { left, right } = node;
+        
+        return stringUtils.uppcase(left?.type).startsWith('Str') || stringUtils.uppcase(left?.type).startsWith('Temp') || stringUtils.uppcase(right?.type).startsWith('Temp') || stringUtils.uppcase(right?.type).startsWith('Str') ? 'StringLiteral' : 'NumericLiteral';
+      }
       return 'NumericLiteral';
     } else if (this.booleanOperator.includes(operator)) {
       return 'BooleanLiteral';

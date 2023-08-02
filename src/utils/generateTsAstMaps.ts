@@ -369,8 +369,8 @@ const generateTsTypeMap: {
 
     return null;
   },
-  BinaryExpression(node: UnionFlowType<Flow, "BinaryExpression">) {
-    const referenceType = operator.operatorType(node.operator);
+  BinaryExpression(node: UnionFlowType<Flow, "BinaryExpression">, path) {
+    const referenceType = operator.operatorType(node.operator, node, path);
     return generateTsTypeMap[referenceType]?.();
   },
   LogicalExpression(node: UnionFlowType<TSType, "LogicalExpression">, path) {
