@@ -83,7 +83,85 @@ function typePromiseOrAnnotation(
 export const FunctionDeclaration =
   "FunctionDeclaration|ArrowFunctionExpression|ClassMethod|ObjectMethod";
 
-function traverseFunctionDeclartion(path) {
+export function getReturnBulletTypeAnnotation(returnAstNode, path, async) {
+  const tsTypes = returnAstNode?.map((returnAstNode) => {
+    try {
+      const { argument } = returnAstNode || {};
+
+      if ((returnAstNode as any).bulletTypeAnnotation) {
+        return {
+          content: (returnAstNode as any).bulletTypeAnnotation,
+          type: (returnAstNode as any).bulletTypeAnnotation.type,
+        };
+      }
+
+      if (t.isJSXElement(argument)) {
+        return {
+          content: {
+            typeAnnotation: t.memberExpression(
+              t.identifier("React"),
+              t.identifier("Element")
+            ),
+            isJSXElement: true,
+          },
+          type: "JSXElment",
+        };
+      }
+
+      if (t.isIdentifier(argument)) {
+        const bindScopePath = path.scope.bindings[argument.name];
+        const returnTypeReference = handleTsAst.Identifier(
+          bindScopePath,
+          [],
+          {
+            isReturnStatement: true,
+          }
+        );
+
+        const typeReference = {
+          content: {
+            typeAnnotation: returnTypeReference,
+            isMaxSizeee:
+              globalThis.isMaxSizeee === bindScopePath?.identifier?.name,
+          },
+          type: returnTypeReference?.typeAnnotation?.type || "unknown",
+        };
+
+        globalThis.isMaxSizeee = "";
+        return typeReference;
+      } else {
+        const returnTypeReference = argument?.type
+          ? generateTsTypeMaps[argument.type]?.(argument, path, {
+              isReturnStatement: true,
+            })
+          : t.tsVoidKeyword();
+
+        const typeReference = {
+          content: {
+            typeAnnotation: returnTypeReference,
+          },
+          type: returnTypeReference?.typeAnnotation?.type || "unknown",
+        };
+
+        return typeReference;
+      }
+    } catch (err) {
+      unknownRender.getUnkonwnTSType(path, async);
+    }
+  });
+
+  const references = typePromiseOrAnnotation(
+    unionUtils.UnionType(tsTypes.map((c) => c.content)),
+    async
+  );
+
+  return {
+    references,
+    tsTypes
+  };
+}
+
+export function traverseFunctionDeclartion(path) {
   if (config.isBlacklisted(path)) {
     return path.skip();
   }
@@ -91,81 +169,12 @@ function traverseFunctionDeclartion(path) {
   if (path.node.returnType) {
     return path.skip();
   }
-  const { body, async, id } = path.node;
+  const { node } = path;
+  const { body, async, id } = node;
   const returnAstNode = handleTsAst.ReturnStatement(body, path);
   try {
     if (returnAstNode.length) {
-      const tsTypes = returnAstNode?.map((returnAstNode) => {
-        try {
-          const { argument } = returnAstNode || {};
-
-          if ((returnAstNode as any).bulletTypeAnnotation) {
-            return {
-              content: (returnAstNode as any).bulletTypeAnnotation,
-              type: (returnAstNode as any).bulletTypeAnnotation.type,
-            };
-          }
-
-          if (t.isJSXElement(argument)) {
-            return {
-              content: {
-                typeAnnotation: t.memberExpression(
-                  t.identifier("React"),
-                  t.identifier("Element")
-                ),
-                isJSXElement: true,
-              },
-              type: "JSXElment",
-            };
-          }
-
-          if (t.isIdentifier(argument)) {
-            const bindScopePath = path.scope.bindings[argument.name];
-            const returnTypeReference = handleTsAst.Identifier(
-              bindScopePath,
-              [],
-              {
-                isReturnStatement: true,
-              }
-            );
-
-            const typeReference = {
-              content: {
-                typeAnnotation: returnTypeReference,
-                isMaxSizeee:
-                  globalThis.isMaxSizeee === bindScopePath?.identifier?.name,
-              },
-              type: returnTypeReference?.typeAnnotation?.type || "unknown",
-            };
-
-            globalThis.isMaxSizeee = "";
-            return typeReference;
-          } else {
-            const returnTypeReference = argument?.type
-              ? generateTsTypeMaps[argument.type]?.(argument, path, {
-                  isReturnStatement: true,
-                })
-              : t.tsVoidKeyword();
-
-            const typeReference = {
-              content: {
-                typeAnnotation: returnTypeReference,
-              },
-              type: returnTypeReference?.typeAnnotation?.type || "unknown",
-            };
-
-            return typeReference;
-          }
-        } catch (err) {
-          unknownRender.getUnkonwnTSType(path, async);
-        }
-      });
-
-      const { node } = path;
-      const references = typePromiseOrAnnotation(
-        unionUtils.UnionType(tsTypes.map((c) => c.content)),
-        async
-      );
+      const { tsTypes, references } = getReturnBulletTypeAnnotation(returnAstNode, path, async);
 
       if (tsTypes.length && references) {
         bullet.addDecorateBullet({
@@ -197,5 +206,5 @@ function traverseFunctionDeclartion(path) {
 export default function () {
   return {
     [FunctionDeclaration]: traverseFunctionDeclartion
-  }
+  };
 }

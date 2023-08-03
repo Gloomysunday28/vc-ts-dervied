@@ -16,7 +16,7 @@ module.exports = require("vscode");
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const vscode = __webpack_require__(1);
 const utils_1 = __webpack_require__(3);
-const config_1 = __webpack_require__(202);
+const config_1 = __webpack_require__(203);
 globalThis.loopPathLimit = 15;
 class CoreTypeAst {
     constructor() {
@@ -60,8 +60,8 @@ const vscode = __webpack_require__(1);
 const parse_1 = __webpack_require__(4);
 const traverse_1 = __webpack_require__(6);
 const visitors_1 = __webpack_require__(184);
-const bullet_1 = __webpack_require__(197);
-const initGlobalThis_1 = __webpack_require__(203);
+const bullet_1 = __webpack_require__(196);
+const initGlobalThis_1 = __webpack_require__(202);
 exports["default"] = {
     dedupArray(elements, mark) {
         const dedupArray = elements.filter((ele, index) => {
@@ -45637,17 +45637,17 @@ exports["default"] = {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.FunctionDeclaration = void 0;
+exports.traverseFunctionDeclartion = exports.getReturnBulletTypeAnnotation = exports.FunctionDeclaration = void 0;
 const generateTsAstMaps_1 = __webpack_require__(186);
 const handleTsAst_1 = __webpack_require__(187);
-const bullet_1 = __webpack_require__(197);
+const bullet_1 = __webpack_require__(196);
 const generate = __webpack_require__(117);
 const vscode = __webpack_require__(1);
 const t = __webpack_require__(10);
 const generic_1 = __webpack_require__(200);
 const unknown_1 = __webpack_require__(201);
-const union_1 = __webpack_require__(193);
-const config_1 = __webpack_require__(202);
+const union_1 = __webpack_require__(195);
+const config_1 = __webpack_require__(203);
 function typePromiseOrAnnotation(tsTypeAnotation, async) {
     if (tsTypeAnotation.isJSXElement) {
         return async ? ": Promise<React.Element>" : ": React.Element";
@@ -45696,6 +45696,66 @@ function typePromiseOrAnnotation(tsTypeAnotation, async) {
         : t.tsTypeAnnotation(annotation);
 }
 exports.FunctionDeclaration = "FunctionDeclaration|ArrowFunctionExpression|ClassMethod|ObjectMethod";
+function getReturnBulletTypeAnnotation(returnAstNode, path, async) {
+    const tsTypes = returnAstNode?.map((returnAstNode) => {
+        try {
+            const { argument } = returnAstNode || {};
+            if (returnAstNode.bulletTypeAnnotation) {
+                return {
+                    content: returnAstNode.bulletTypeAnnotation,
+                    type: returnAstNode.bulletTypeAnnotation.type,
+                };
+            }
+            if (t.isJSXElement(argument)) {
+                return {
+                    content: {
+                        typeAnnotation: t.memberExpression(t.identifier("React"), t.identifier("Element")),
+                        isJSXElement: true,
+                    },
+                    type: "JSXElment",
+                };
+            }
+            if (t.isIdentifier(argument)) {
+                const bindScopePath = path.scope.bindings[argument.name];
+                const returnTypeReference = handleTsAst_1.default.Identifier(bindScopePath, [], {
+                    isReturnStatement: true,
+                });
+                const typeReference = {
+                    content: {
+                        typeAnnotation: returnTypeReference,
+                        isMaxSizeee: globalThis.isMaxSizeee === bindScopePath?.identifier?.name,
+                    },
+                    type: returnTypeReference?.typeAnnotation?.type || "unknown",
+                };
+                globalThis.isMaxSizeee = "";
+                return typeReference;
+            }
+            else {
+                const returnTypeReference = argument?.type
+                    ? generateTsAstMaps_1.generateTsTypeMaps[argument.type]?.(argument, path, {
+                        isReturnStatement: true,
+                    })
+                    : t.tsVoidKeyword();
+                const typeReference = {
+                    content: {
+                        typeAnnotation: returnTypeReference,
+                    },
+                    type: returnTypeReference?.typeAnnotation?.type || "unknown",
+                };
+                return typeReference;
+            }
+        }
+        catch (err) {
+            unknown_1.default.getUnkonwnTSType(path, async);
+        }
+    });
+    const references = typePromiseOrAnnotation(union_1.unionUtils.UnionType(tsTypes.map((c) => c.content)), async);
+    return {
+        references,
+        tsTypes
+    };
+}
+exports.getReturnBulletTypeAnnotation = getReturnBulletTypeAnnotation;
 function traverseFunctionDeclartion(path) {
     if (config_1.default.isBlacklisted(path)) {
         return path.skip();
@@ -45703,64 +45763,12 @@ function traverseFunctionDeclartion(path) {
     if (path.node.returnType) {
         return path.skip();
     }
-    const { body, async, id } = path.node;
+    const { node } = path;
+    const { body, async, id } = node;
     const returnAstNode = handleTsAst_1.default.ReturnStatement(body, path);
     try {
         if (returnAstNode.length) {
-            const tsTypes = returnAstNode?.map((returnAstNode) => {
-                try {
-                    const { argument } = returnAstNode || {};
-                    if (returnAstNode.bulletTypeAnnotation) {
-                        return {
-                            content: returnAstNode.bulletTypeAnnotation,
-                            type: returnAstNode.bulletTypeAnnotation.type,
-                        };
-                    }
-                    if (t.isJSXElement(argument)) {
-                        return {
-                            content: {
-                                typeAnnotation: t.memberExpression(t.identifier("React"), t.identifier("Element")),
-                                isJSXElement: true,
-                            },
-                            type: "JSXElment",
-                        };
-                    }
-                    if (t.isIdentifier(argument)) {
-                        const bindScopePath = path.scope.bindings[argument.name];
-                        const returnTypeReference = handleTsAst_1.default.Identifier(bindScopePath, [], {
-                            isReturnStatement: true,
-                        });
-                        const typeReference = {
-                            content: {
-                                typeAnnotation: returnTypeReference,
-                                isMaxSizeee: globalThis.isMaxSizeee === bindScopePath?.identifier?.name,
-                            },
-                            type: returnTypeReference?.typeAnnotation?.type || "unknown",
-                        };
-                        globalThis.isMaxSizeee = "";
-                        return typeReference;
-                    }
-                    else {
-                        const returnTypeReference = argument?.type
-                            ? generateTsAstMaps_1.generateTsTypeMaps[argument.type]?.(argument, path, {
-                                isReturnStatement: true,
-                            })
-                            : t.tsVoidKeyword();
-                        const typeReference = {
-                            content: {
-                                typeAnnotation: returnTypeReference,
-                            },
-                            type: returnTypeReference?.typeAnnotation?.type || "unknown",
-                        };
-                        return typeReference;
-                    }
-                }
-                catch (err) {
-                    unknown_1.default.getUnkonwnTSType(path, async);
-                }
-            });
-            const { node } = path;
-            const references = typePromiseOrAnnotation(union_1.unionUtils.UnionType(tsTypes.map((c) => c.content)), async);
+            const { tsTypes, references } = getReturnBulletTypeAnnotation(returnAstNode, path, async);
             if (tsTypes.length && references) {
                 bullet_1.default.addDecorateBullet({
                     ...tsTypes?.[0],
@@ -45782,6 +45790,7 @@ function traverseFunctionDeclartion(path) {
         path.skip(); // 跳过子节点循环
     }
 }
+exports.traverseFunctionDeclartion = traverseFunctionDeclartion;
 function default_1() {
     return {
         [exports.FunctionDeclaration]: traverseFunctionDeclartion
@@ -45799,10 +45808,11 @@ exports["default"] = default_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.baseTsAstMaps = exports.curdGenerateTsAstMaps = exports.generateTsTypeMaps = void 0;
 const handleTsAst_1 = __webpack_require__(187);
+const FunctionDeclaration_1 = __webpack_require__(185);
 const operator_1 = __webpack_require__(192);
 const t = __webpack_require__(10);
-const es_1 = __webpack_require__(195);
-const union_1 = __webpack_require__(193);
+const es_1 = __webpack_require__(193);
+const union_1 = __webpack_require__(195);
 //  js类型与Flow ast映射关系 只针对该类型生成TSType
 const generateTsTypeMap = {
     undefined: t.tsVoidKeyword,
@@ -45917,9 +45927,19 @@ const generateTsTypeMap = {
                 return t.tsTypeReference(t.identifier('Record'), t.tsTypeParameterInstantiation([t.tsStringKeyword(), t.tsAnyKeyword()]));
             }
             return t.TSTypeLiteral(properties.map((propert) => {
+                let keyName = (propert.key?.name ||
+                    propert.key);
                 if (propert.key) {
-                    const tsType = t.tsPropertySignature(t.stringLiteral((propert.key?.name ||
-                        propert.key)), t.tsTypeAnnotation(generateTsTypeMap[propert.value.type]?.(propert.value, path)));
+                    if (propert.computed) {
+                        const scopeIdnetifier = path.scope.getAllBindings()?.[propert.key.name];
+                        if (scopeIdnetifier) {
+                            const value = generateTsTypeMap[scopeIdnetifier.path.node.type]?.(scopeIdnetifier.path.node, path);
+                            if (t.isTSLiteralType(value)) {
+                                keyName = value.literal.value;
+                            }
+                        }
+                    }
+                    const tsType = t.tsPropertySignature(t.stringLiteral(keyName), t.tsTypeAnnotation(generateTsTypeMap[propert.value.type]?.(propert.value, path)));
                     tsType.optional =
                         option?.optional || t.isOptionalMemberExpression(propert.value);
                     return tsType;
@@ -45933,6 +45953,13 @@ const generateTsTypeMap = {
         return t.tsFunctionType(paramsType, params.map((param) => t.isRestElement(param) ? t.restElement(t.identifier(param.argument?.name)) : t.identifier(param.name)), t.tsTypeAnnotation((t.isIdentifier(body)
             ? handleTsAst_1.default.Identifier(path.scope.getBinding(body.name), [])
             : exports.generateTsTypeMaps[body.type]?.(body, path)) || t.tsUnknownKeyword()));
+    },
+    BlockStatement(node, path, options) {
+        const { references } = (0, FunctionDeclaration_1.getReturnBulletTypeAnnotation)(node.body, path, path.node?.async);
+        if (references) {
+            return references.typeAnnotation;
+        }
+        return t.tsUndefinedKeyword();
     },
     // 参数类型
     TsTypeParameterDeclaration: (params) => {
@@ -46313,6 +46340,9 @@ const handleTsAstMaps = {
             handleTsAstMaps[left.type](left, tsAstTypes, path);
         }
     },
+    FunctionDeclaration(node, tsAstTypes, path) {
+        tsAstTypes.push(generateTsAstMaps_1.generateTsTypeMaps.ArrowFunctionExpression(node, path));
+    },
     VariableDeclarator: (node, tsAstTypes, path, options) => {
         const { init, id } = node;
         if (id.typeAnnotation) {
@@ -46470,8 +46500,8 @@ exports["default"] = {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const generateTsAstMaps_1 = __webpack_require__(186);
 const t = __webpack_require__(10);
-const union_1 = __webpack_require__(193);
-const string_1 = __webpack_require__(194);
+const union_1 = __webpack_require__(195);
+const string_1 = __webpack_require__(198);
 exports["default"] = {
     numberOperator: ['+', '-', '*', '**', '/', '%', '&', '|', '>>', '>>>', '<<', '^'],
     booleanOperator: ["==", "===", "!=", "!==", "in", "instanceof", ">", "<", ">=", "<=", ",>", "!", "!!"],
@@ -46501,86 +46531,8 @@ exports["default"] = {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.unionUtils = void 0;
-const t = __webpack_require__(10);
-const __1 = __webpack_require__(3);
-exports.unionUtils = {
-    GetTSType(tsType) {
-        if (t.isTSTypeAnnotation(tsType)) {
-            return tsType.typeAnnotation;
-        }
-        else {
-            return tsType;
-        }
-    },
-    UnionType(tsyTypes) {
-        if (tsyTypes.length) {
-            if (tsyTypes.length === 1) {
-                return tsyTypes[0];
-            }
-            else {
-                return {
-                    typeAnnotation: t.tsUnionType(tsyTypes.map(params => t.isTSTypeAnnotation(params.typeAnnotation) ? params.typeAnnotation.typeAnnotation : params.typeAnnotation)),
-                    isMaxSizeee: tsyTypes.find(t => t.isMaxSizeee)
-                };
-            }
-        }
-    },
-    /**
-     * 整合数组各个TS类型变成联合类型
-     */
-    IntegrateTSTypeToUnionType(tsTypes) {
-        const untionTypes = tsTypes.map(tsType => {
-            if (t.isTSUnionType(tsType)) {
-                return tsType.types;
-            }
-            else if (t.isTSTypeAnnotation(tsType)) {
-                return tsType.typeAnnotation;
-            }
-            else {
-                return tsType;
-            }
-        }).flat(Infinity);
-        return t.tsUnionType(__1.default.dedupArray(untionTypes, 'type'));
-    }
-};
-
-
-/***/ }),
-/* 194 */
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports["default"] = {
-    uppcase(str) {
-        return `${str.slice(0, 1).toUpperCase()}${str.slice(1)}`;
-    },
-    padStart(str, prefix) {
-        return `${prefix || ''}${str}`;
-    },
-    padEnd(str, post) {
-        return `${str}${post || ''}`;
-    },
-    filterStr(type, filterStr, prefix, postfix) {
-        if (type === 'ObjectTypeAnnotation' || type === 'TSTypeLiteral') {
-            return '';
-        }
-        return this.padEnd(this.padStart(filterStr, prefix), postfix);
-    },
-};
-
-
-/***/ }),
-/* 195 */
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.esRender = void 0;
-const lib_es2015_1 = __webpack_require__(196);
+const lib_es2015_1 = __webpack_require__(194);
 const template_1 = __webpack_require__(166);
 exports.esRender = {
     renderESGeneric(property) {
@@ -46597,7 +46549,7 @@ exports.esRender = {
 
 
 /***/ }),
-/* 196 */
+/* 194 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -46795,15 +46747,67 @@ exports.EsTSUtils = {
 
 
 /***/ }),
-/* 197 */
+/* 195 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.unionUtils = void 0;
+const t = __webpack_require__(10);
+const __1 = __webpack_require__(3);
+exports.unionUtils = {
+    GetTSType(tsType) {
+        if (t.isTSTypeAnnotation(tsType)) {
+            return tsType.typeAnnotation;
+        }
+        else {
+            return tsType;
+        }
+    },
+    UnionType(tsyTypes) {
+        if (tsyTypes.length) {
+            if (tsyTypes.length === 1) {
+                return tsyTypes[0];
+            }
+            else {
+                return {
+                    typeAnnotation: t.tsUnionType(tsyTypes.map(params => t.isTSTypeAnnotation(params.typeAnnotation) ? params.typeAnnotation.typeAnnotation : params.typeAnnotation)),
+                    isMaxSizeee: tsyTypes.find(t => t.isMaxSizeee)
+                };
+            }
+        }
+    },
+    /**
+     * 整合数组各个TS类型变成联合类型
+     */
+    IntegrateTSTypeToUnionType(tsTypes) {
+        const untionTypes = tsTypes.map(tsType => {
+            if (t.isTSUnionType(tsType)) {
+                return tsType.types;
+            }
+            else if (t.isTSTypeAnnotation(tsType)) {
+                return tsType.typeAnnotation;
+            }
+            else {
+                return tsType;
+            }
+        }).flat(Infinity);
+        return t.tsUnionType(__1.default.dedupArray(untionTypes, 'type'));
+    }
+};
+
+
+/***/ }),
+/* 196 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const vscode = __webpack_require__(1);
-const format_1 = __webpack_require__(198);
-const string_1 = __webpack_require__(194);
+const format_1 = __webpack_require__(197);
+const string_1 = __webpack_require__(198);
 const author_1 = __webpack_require__(199);
 class Bullet {
     constructor() {
@@ -46869,7 +46873,7 @@ exports["default"] = new Bullet();
 
 
 /***/ }),
-/* 198 */
+/* 197 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -46898,6 +46902,32 @@ exports["default"] = new Format();
 
 
 /***/ }),
+/* 198 */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports["default"] = {
+    uppcase(str) {
+        return `${str.slice(0, 1).toUpperCase()}${str.slice(1)}`;
+    },
+    padStart(str, prefix) {
+        return `${prefix || ''}${str}`;
+    },
+    padEnd(str, post) {
+        return `${str}${post || ''}`;
+    },
+    filterStr(type, filterStr, prefix, postfix) {
+        if (type === 'ObjectTypeAnnotation' || type === 'TSTypeLiteral') {
+            return '';
+        }
+        return this.padEnd(this.padStart(filterStr, prefix), postfix);
+    },
+};
+
+
+/***/ }),
 /* 199 */
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -46920,7 +46950,7 @@ exports["default"] = `
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const string_1 = __webpack_require__(194);
+const string_1 = __webpack_require__(198);
 exports["default"] = {
     AsyncGeneric(generic, async) {
         return `${async ? 'Promise<' : ''}${string_1.default.uppcase(generic)}${async ? '>' : ''}`;
@@ -46936,7 +46966,7 @@ exports["default"] = {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const generic_1 = __webpack_require__(200);
-const bullet_1 = __webpack_require__(197);
+const bullet_1 = __webpack_require__(196);
 const vscode = __webpack_require__(1);
 exports["default"] = {
     getUnkonwnTSType(path, async, unknownMark = '?') {
@@ -46955,6 +46985,21 @@ exports["default"] = {
 
 /***/ }),
 /* 202 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const loopPath_1 = __webpack_require__(190);
+function initGlobalThis() {
+    globalThis.isMaxSizeee = false;
+    loopPath_1.default.loopPathMap.clear();
+}
+exports["default"] = initGlobalThis;
+
+
+/***/ }),
+/* 203 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
@@ -46997,21 +47042,6 @@ exports["default"] = {
         }
     }
 };
-
-
-/***/ }),
-/* 203 */
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const loopPath_1 = __webpack_require__(190);
-function initGlobalThis() {
-    globalThis.isMaxSizeee = false;
-    loopPath_1.default.loopPathMap.clear();
-}
-exports["default"] = initGlobalThis;
 
 
 /***/ })

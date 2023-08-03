@@ -50,6 +50,9 @@ const handleTsAstMaps = {
       handleTsAstMaps[left.type](left, tsAstTypes, path);
     }
   },
+  FunctionDeclaration(node, tsAstTypes: TSType[], path) {
+    tsAstTypes.push(generateTsTypeMaps.ArrowFunctionExpression(node, path));
+  },
   VariableDeclarator: (
     node: UnionFlowType<Node, "VariableDeclarator">,
     tsAstTypes: Flow[],

@@ -3,6 +3,7 @@
 import type { GenerateTsAstMapsOption } from "../interface/generateTsAstMapsDto";
 import type { KeyofObject, UnionFlowType } from "../interface";
 import handleTsAst from "./handleTsAst";
+import { getReturnBulletTypeAnnotation } from '../core/visitors/FunctionDeclaration'
 import operator from "../utils/helpers/operator";
 import type {
   ObjectTypeProperty,
@@ -195,12 +196,20 @@ const generateTsTypeMap: {
       return t.TSTypeLiteral(
         properties.map(
           (propert: ObjectTypeProperty | ObjectTypeSpreadProperty) => {
+            let keyName = (((propert as ObjectTypeProperty).key as Identifier)?.name ||
+            (propert as ObjectTypeProperty).key) as string
             if ((propert as ObjectTypeProperty).key) {
+              if (propert.computed) {
+                const scopeIdnetifier = path.scope.getAllBindings()?.[propert.key.name]
+                if (scopeIdnetifier) {
+                    const value = generateTsTypeMap[scopeIdnetifier.path.node.type]?.(scopeIdnetifier.path.node, path)
+                  if (t.isTSLiteralType(value)) {
+                    keyName = value.literal.value
+                  }
+                }
+              }
               const tsType = t.tsPropertySignature(
-                t.stringLiteral(
-                  (((propert as ObjectTypeProperty).key as Identifier)?.name ||
-                    (propert as ObjectTypeProperty).key) as string
-                ),
+                t.stringLiteral(keyName),
                 t.tsTypeAnnotation(
                   generateTsTypeMap[(propert as ObjectTypeProperty).value.type]?.(
                     propert.value,
@@ -234,6 +243,15 @@ const generateTsTypeMap: {
           : generateTsTypeMaps[body.type]?.(body, path)) || t.tsUnknownKeyword()
       )
     );
+  },
+  BlockStatement(node: UnionFlowType<Flow, "ArrowFunctionExpression">['body'], path, options) {
+    const { references } = getReturnBulletTypeAnnotation(node.body, path, path.node?.async)
+
+    if (references) {
+      return references.typeAnnotation
+    }
+
+    return t.tsUndefinedKeyword();
   },
   // 参数类型
   TsTypeParameterDeclaration: (params: UnionFlowType<Node, "Identifier">[]) => {

@@ -63,7 +63,7 @@ export const handleRerencePath = (referencePath, tsAstTypes) => {
 
 // 针对该变量定义时的变了进行类型收集
 export const handlePath = (referencePath, tsAstTypes, options?: IdentifierOptions) => {
-  let collectTSLock = false // 开发是否已经定义了类型，有的话则不再收集类型
+  let collectTSLock = false; // 开发是否已经定义了类型，有的话则不再收集类型
   referencePath?.path?.container.filter(node => node.name === referencePath?.path?.node?.name).forEach((node) => {
     if (options?.isReturnStatement) {
       if (node.typeAnnotation) {
