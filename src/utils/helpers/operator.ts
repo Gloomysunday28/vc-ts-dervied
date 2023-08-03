@@ -1,5 +1,5 @@
 import { type BinaryExpression, LogicalExpression } from '@babel/types'
-import { generateTsTypeMaps } from '../generateTsAstMaps';
+import { generateTsTypeMaps } from '../tsTypes/generateTsAstMaps';
 import * as t from '@babel/types';
 import { UnionFlowType } from '../../interface';
 import { unionUtils } from './union';

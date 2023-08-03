@@ -1,10 +1,11 @@
 /* eslint-disable */
 // @ts-nocheck
-import type { GenerateTsAstMapsOption } from "../interface/generateTsAstMapsDto";
-import type { KeyofObject, UnionFlowType } from "../interface";
+import type { GenerateTsAstMapsOption } from "../../interface/generateTsAstMapsDto";
+import type { KeyofObject, UnionFlowType } from "../../interface";
 import handleTsAst from "./handleTsAst";
-import { getReturnBulletTypeAnnotation } from '../core/visitors/FunctionDeclaration'
-import operator from "../utils/helpers/operator";
+import { getReturnBulletTypeAnnotation } from '../../core/visitors/FunctionDeclaration'
+import operator from "../helpers/operator";
+import fs from '../../core/fs'
 import type {
   ObjectTypeProperty,
   ObjectTypeSpreadProperty,
@@ -15,8 +16,12 @@ import type {
   TSType, // TSType
 } from "@babel/types";
 import * as t from "@babel/types";
-import { esRender } from '../core/render/es'
-import { unionUtils } from './helpers/union'
+import { esRender } from '../../core/render/es'
+import utils from "..";
+import { unionUtils } from '../helpers/union'
+import ExportDeclarationVisitor from "../../core/visitors/ExportDeclaration";
+import ExportTsTypesMap from "./exportTsTypesMap";
+import exportTsAst from '../../utils/tsTypes/exportTsAst'
 
 //  js类型与Flow ast映射关系 只针对该类型生成TSType
 const generateTsTypeMap: {
@@ -297,13 +302,9 @@ const generateTsTypeMap: {
       // expression 表达式
     }
 
-    if (t.isIdentifier(object)) {
-      const identifierPath = path.scope.getBinding(object.name).identifier;
-      const typeAnnotation = identifierPath.typeAnnotation?.typeAnnotation
-
-      if (typeAnnotation) {
-        return typeAnnotation;
-      }
+    const typeAnnotation = exportTsAst(object, property, path)
+    if (typeAnnotation) {
+      return typeAnnotation
     }
 
     if (generateTsTypeMap[object.type]) {
