@@ -7,7 +7,7 @@ import stringUtils from './string';
 
 export default {
   numberOperator: ['+', '-', '*', '**', '/', '%', '&', '|', '>>', '>>>', '<<', '^'],
-  booleanOperator: ["==" , "===" , "!=" , "!==" , "in" , "instanceof" , ">" , "<" , ">=" , "<=" , ",>"],
+  booleanOperator: ["==" , "===" , "!=" , "!==" , "in" , "instanceof" , ">" , "<" , ">=" , "<=" , ",>", "!", "!!"],
   expressionOperator: ['||', '&&', '??'],
   operatorType(operator: BinaryExpression['operator'] | LogicalExpression['operator'], node: UnionFlowType<t.Node, 'LogicalExpression'>, path) {
     if (this.numberOperator.includes(operator)) {

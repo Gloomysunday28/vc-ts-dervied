@@ -18,7 +18,7 @@
       "properties": {
         "TypescriptAutoDervie.withBlackFns.names": {
           "type": "string",
-          "default": "1",
+          "default": "",
           "description": "Select the function name you want to block parsing Use ',' gap(选择你想要屏蔽解析的函数名称, 用逗号隔开)"
         }
       }
