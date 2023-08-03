@@ -29,10 +29,10 @@ class Bullet {
    */
   generateInterface(bullet: BulletDto): BulletDto;
   generateInterface(bullet: BulletDto) {
-    const { content } = bullet;
+    const { content, async, name } = bullet;
     const length = content?.match(/(\n)/g)?.length;
     if (length) {
-      const genericName = `${strUtils.uppcase(bullet.name)}ReturnType`;
+      const genericName =`${strUtils.uppcase(async ? name.slice(0, -1) : name)}ReturnType${async ? '>' : ''}`;
       bullet.hoverMessage = new vscode.MarkdownString(
         '类型详细情况如下 \n',
         true

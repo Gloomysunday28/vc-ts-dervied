@@ -80,7 +80,7 @@ function typePromiseOrAnnotation(
     : t.tsTypeAnnotation(annotation as t.TSType);
 }
 
-const FunctionDeclaration =
+export const FunctionDeclaration =
   "FunctionDeclaration|ArrowFunctionExpression|ClassMethod|ObjectMethod";
 
 function traverseFunctionDeclartion(path) {
@@ -170,6 +170,7 @@ function traverseFunctionDeclartion(path) {
       if (tsTypes.length && references) {
         bullet.addDecorateBullet({
           ...tsTypes?.[0],
+          async,
           content:
             typeof references === "string"
               ? references

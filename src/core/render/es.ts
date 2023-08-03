@@ -7,13 +7,11 @@ export const esRender = {
   renderESGeneric(property) {
     if (EsTSUtils[property.name]) {
       const buildASTRequire = template(`
-          const Generic: {
-            ${EsTSUtils[property.name]()}
-          } = {}
+          type Generic = ${EsTSUtils[property.name]()}
         `, {
         plugins: ['typescript']
-      })?.().declarations?.[0].id.typeAnnotation.typeAnnotation
-     return buildASTRequire
+      })?.().typeAnnotation;
+     return buildASTRequire;
     }
   }
-}
+};

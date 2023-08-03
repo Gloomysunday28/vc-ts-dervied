@@ -3,47 +3,47 @@ export const EsTSUtils = {
   /**
     * Gets or sets the length of the array. This is a number one higher than the highest index in the array.
     */
-  length: () => `length: number`,
+  length: () => `number`,
   /**
    * Returns a string representation of an array.
    */
-  toString: (keyword) => `toString(): ${keyword}`,
+  toString: (keyword) => `${keyword}`,
   /**
    * Returns a string representation of an array. The elements are converted to string using their toLocaleString methods.
    */
-  toLocaleString: (keyword) => `toLocaleString(): ${keyword}`,
+  toLocaleString: (keyword) => `${keyword}`,
   /**
    * Removes the last element from an array and returns it.
    * If the array is empty, undefined is returned and the array is not modified.
    */
-  pop: (TSType = GenericT) => `pop(): ${TSType} | undefined`,
+  pop: (TSType = GenericT) => `${TSType} | undefined`,
   /**
    * Appends new elements to the end of an array, and returns the new length of the array.
    * @param items New elements to add to the array.
    */
-  push: (TSType = GenericT, ReturnType = 'number') => `push(...items: ${TSType}[]): ${ReturnType}`,
+  push: (TSType = GenericT) => `${TSType}`,
   /**
    * Combines two or more arrays.
    * This method returns a new array without modifying any existing arrays.
    * @param items Additional arrays and/or items to add to the end of the array.
    */
-  concat: (TSType = GenericT) => `concat(...items: (TSType | ConcatArray<${TSType}>[])): TSType[];`,
+  concat: (TSType = GenericT) => `${TSType}[];`,
   /**
    * Adds all the elements of an array into a string, separated by the specified separator string.
    * @param separator A string used to separate one element of the array from the next in the resulting string. If omitted, the array elements are separated with a comma.
    */
-  join: (TSType = 'string') => `join(separator?: ${TSType}): ${TSType};`,
+  join: (TSType = 'string') => `${TSType};`,
   /**
    * Reverses the elements in an array in place.
    * This method mutates the array and returns a reference to the same array.
    */
-  reverse: (TSType = GenericT) => `reverse(): ${TSType}[]`,
+  reverse: (TSType = GenericT) => `${TSType}[]`,
   /**
    * Removes the first element from an array and returns it.
    * If the array is empty, undefined is returned and the array is not modified.
    */
 
-  shift: (TSType = GenericT) => `shift(): ${TSType} | undefined`,
+  shift: (TSType = GenericT) => `${TSType} | undefined`,
   /**
    * Returns a copy of a section of an array.
    * For both start and end, a negative index can be used to indicate an offset from the end of the array.
@@ -53,7 +53,7 @@ export const EsTSUtils = {
    * @param end The end index of the specified portion of the array. This is exclusive of the element at the index 'end'.
    * If end is undefined, then the slice extends to the end of the array.
    */
-  slice: (TSType = GenericT) => `slice(start?: number, end?: number): ${TSType}[];`,
+  slice: (TSType = GenericT) => `${TSType}[];`,
   /**
    * Sorts an array in place.
    * This method mutates the array and returns a reference to the same array.
@@ -64,14 +64,14 @@ export const EsTSUtils = {
    * [11,2,22,1].sort((a, b) => a - b)
    * ```
    */
-  sort: (TSType = GenericT) => `sort(compareFn?: (a: ${TSType}, b: ${TSType}) => number): this;`,
+  sort: (TSType = GenericT) => `${TSType}[];`,
   /**
    * Removes elements from an array and, if necessary, inserts new elements in their place, returning the deleted elements.
    * @param start The zero-based location in the array from which to start removing elements.
    * @param deleteCount The number of elements to remove.
    * @returns An array containing the elements that were deleted.
    */
-  splice: (TSType = GenericT) => `splice(start: number, deleteCount?: number, ...items: ${TSType}[]): ${TSType}[];`,
+  splice: (TSType = GenericT) => `${TSType}[];`,
   /**
    * Removes elements from an array and, if necessary, inserts new elements in their place, returning the deleted elements.
    * @param start The zero-based location in the array from which to start removing elements.
@@ -83,19 +83,19 @@ export const EsTSUtils = {
    * Inserts new elements at the start of an array, and returns the new length of the array.
    * @param items Elements to insert at the start of the array.
    */
-  unshift: (TSType = GenericT) => `unshift(...items: ${TSType}[]): number`,
+  unshift: (TSType = GenericT) => `number`,
   /**
    * Returns the index of the first occurrence of a value in an array, or -1 if it is not present.
    * @param searchElement The value to locate in the array.
    * @param fromIndex The array index at which to begin the search. If fromIndex is omitted, the search starts at index 0.
    */
-  indexOf: (TSType = GenericT) => `indexOf(searchElement: ${TSType}, fromIndex?: number): number`,
+  indexOf: (TSType = GenericT) => `number`,
   /**
    * Returns the index of the last occurrence of a specified value in an array, or -1 if it is not present.
    * @param searchElement The value to locate in the array.
    * @param fromIndex The array index at which to begin searching backward. If fromIndex is omitted, the search starts at the last index in the array.
    */
-  lastIndexOf: (TSType = GenericT) => `lastIndexOf(searchElement: ${TSType}, fromIndex?: number): number`,
+  lastIndexOf: (TSType = GenericT) => `number`,
   /**
    * Determines whether all the members of an array satisfy the specified test.
    * @param predicate A function that accepts up to three arguments. The every method calls
@@ -104,7 +104,7 @@ export const EsTSUtils = {
    * @param thisArg An object to which the this keyword can refer in the predicate function.
    * If thisArg is omitted, undefined is used as the this value.
    */
-  every: (TSType = GenericT) => `every<S extends ${TSType}>(predicate: (value: ${TSType}, index: number, array: ${TSType}[]) => value is S, thisArg?: any): this is S[];`,
+  every: (TSType = GenericT) => `boolean`,
   /**
    * Determines whether all the members of an array satisfy the specified test.
    * @param predicate A function that accepts up to three arguments. The every method calls
@@ -121,25 +121,25 @@ export const EsTSUtils = {
    * @param thisArg An object to which the this keyword can refer in the predicate function.
    * If thisArg is omitted, undefined is used as the this value.
    */
-  some: (TSType = GenericT) => `some(predicate: (value: ${TSType}, index: number, array: ${TSType}[]) => unknown, thisArg?: any): boolean;`,
+  some: (TSType = GenericT) => `boolean;`,
   /**
    * Performs the specified action for each element in an array.
    * @param callbackfn  A function that accepts up to three arguments. forEach calls the callbackfn function one time for each element in the array.
    * @param thisArg  An object to which the this keyword can refer in the callbackfn function. If thisArg is omitted, undefined is used as the this value.
    */
-  forEach: (TSType = GenericT) => `forEach(callbackfn: (value: ${TSType}, index: number, array: ${TSType}[]) => void, thisArg?: any): void;`,
+  forEach: (TSType = GenericT) => `void;`,
   /**
    * Calls a defined callback function on each element of an array, and returns an array that contains the results.
    * @param callbackfn A function that accepts up to three arguments. The map method calls the callbackfn function one time for each element in the array.
    * @param thisArg An object to which the this keyword can refer in the callbackfn function. If thisArg is omitted, undefined is used as the this value.
    */
-  map: (TSType = GenericT, ReturnType = GenericT) => `map<${ReturnType}>(callbackfn: (value: ${TSType}, index: number, array: ${TSType}[]) => ${ReturnType}, thisArg?: any): ${ReturnType}[];`,
+  map: (TSType = GenericT, ReturnType = GenericT) => `${TSType}[];`,
   /**
    * Returns the elements of an array that meet the condition specified in a callback function.
    * @param predicate A function that accepts up to three arguments. The filter method calls the predicate function one time for each element in the array.
    * @param thisArg An object to which the this keyword can refer in the predicate function. If thisArg is omitted, undefined is used as the this value.
    */
-  filter: (TSType = GenericT) => `filter<S extends ${TSType}>(predicate: (value: ${TSType}, index: number, array: ${TSType}[]) => value is S, thisArg?: any): S[];`,
+  filter: (TSType = GenericT) => `${TSType}[];`,
   /**
    * Returns the elements of an array that meet the condition specified in a callback function.
    * @param predicate A function that accepts up to three arguments. The filter method calls the predicate function one time for each element in the array.
@@ -155,35 +155,35 @@ export const EsTSUtils = {
    * @param callbackfn A function that accepts up to four arguments. The reduce method calls the callbackfn function one time for each element in the array.
    * @param initialValue If initialValue is specified, it is used as the initial value to start the accumulation. The first call to the callbackfn function provides this value as an argument instead of an array value.
    */
-  reduce: (TSType = GenericT, ReturnType = GenericT) => `reduce<${ReturnType}>(callbackfn: (previousValue: ${ReturnType}, currentValue: ${TSType}, currentIndex: number, array: ${TSType}[]) => ${ReturnType}, initialValue: ${ReturnType}): ${ReturnType};`,
+  reduce: (TSType = GenericT, ReturnType = GenericT) => `${TSType};`,
   /**
     * Returns true if the sequence of elements of searchString converted to a String is the
     * same as the corresponding elements of this object (converted to a String) starting at
     * position. Otherwise returns false.
     */
-  startsWith: () => `startsWith(searchString: string, position?: number): boolean;`,
+  startsWith: () => `boolean;`,
   /**
    * Returns a supplied numeric expression rounded to the nearest integer.
    * @param x The value to be rounded to the nearest integer.
    */
-  round: () => `round(x: number): number`,
+  round: () => `number`,
   /**
    * Returns the smallest integer greater than or equal to its numeric argument.
    * @param x A numeric expression.
    */
-  ceil: () => `ceil(x: number): number`,
+  ceil: () => `number`,
   /**
      * Replaces text in a string, using a regular expression or search string.
      * @param searchValue A string to search for.
      * @param replacer A function that returns the replacement text.
      */
-  replace: () => `replace(searchValue: string | RegExp, replacer: (substring: string, ...args: any[]) => string): string`,
+  replace: () => `string`,
   /**
   * Converts a JavaScript Object Notation (JSON) string into an object.
   * @param text A valid JSON string.
   * @param reviver A function that transforms the results. This function is called for each member of the object.
   * If a member contains nested objects, the nested objects are transformed before the parent object is.
   */
-  parse: () => `parse(text: string, reviver?: (this: any, key: string, value: any) => any): any`,
+  parse: () => `any`,
   includes: () => 'boolean'
 };

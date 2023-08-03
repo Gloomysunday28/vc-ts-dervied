@@ -7,6 +7,7 @@ export default {
     const { node } = path;
     const { id } = node;
     bullet.addDecorateBullet({
+      async: false,
       content: async ? `: Promise<${unknownMark}>` : `: ${unknownMark}`,
       type: "?",
       name: generic.AsyncGeneric(

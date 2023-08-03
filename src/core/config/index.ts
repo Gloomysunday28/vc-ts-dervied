@@ -9,17 +9,20 @@ export default {
   },
   changeConfiguration(event) {
     if (event.affectsConfiguration('TypescriptAutoDervie.withBlackFns.names')) {
-      this.withBlackFns = (this.getConfiguration().get('withBlackFns.names') || '').split(',');
+      this.withBlackFns = (this.getConfiguration().get('withBlackFns.names') || '').split(', ');
       utils.transformAST();
     }
   },
   installConfiguration() {
-    this.withBlackFns = (this.getConfiguration().get('withBlackFns.names') || '').split(',');
+    this.withBlackFns = (this.getConfiguration().get('withBlackFns.names') || '').split(', ');
     return vscode.workspace.onDidChangeConfiguration(this.changeConfiguration);
   },
   /** 是否是黑名单 */
   isBlacklisted(path: Record<string, any>) {
+    this.withBlackFns = (this.getConfiguration().get('withBlackFns.names') || '').split(', ');
     switch (true) {
+      case t.isFunctionDeclaration(path.node):
+        return this.withBlackFns.includes(path.node?.id?.name);
       case path.key === 'init':
         return this.withBlackFns.includes(path.parent?.id?.name);
       case path.listKey === 'arguments' && t.isCallExpression(path.parent):
