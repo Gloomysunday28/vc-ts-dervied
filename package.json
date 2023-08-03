@@ -12,6 +12,18 @@
   "categories": [
     "Other"
   ],
+  "contributes": {
+    "configuration": [{
+      "title": "TypescriptAutoDervie",
+      "properties": {
+        "TypescriptAutoDervie.withBlackFns.names": {
+          "type": "string",
+          "default": "1",
+          "description": "Select the function name you want to block parsing(选择你想要屏蔽解析的函数名称)"
+        }
+      }
+    }]
+  },
   "icon": "images/theme.png",
   "languages": [{
     "id": "ts",

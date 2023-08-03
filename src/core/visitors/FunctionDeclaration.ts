@@ -9,6 +9,7 @@ import * as t from "@babel/types";
 import generic from "../../utils/helpers/generic";
 import unknownRender from "../render/unknown";
 import { unionUtils } from "../../utils/helpers/union";
+import config from '../config';
 
 /**
  * @description 兼容async await语法的TypeReference
@@ -83,6 +84,10 @@ const FunctionDeclaration =
   "FunctionDeclaration|ArrowFunctionExpression|ClassMethod|ObjectMethod";
 
 function traverseFunctionDeclartion(path) {
+  if (config.isBlacklisted(path)) {
+    return path.skip();
+  }
+  
   if (path.node.returnType) {
     return path.skip();
   }

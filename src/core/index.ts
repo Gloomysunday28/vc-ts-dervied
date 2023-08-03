@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import utils from "../utils";
+import config from './config';
 import type { Disposable } from 'vscode';
 
 globalThis.loopPathLimit = 15;
@@ -20,7 +21,7 @@ export default class CoreTypeAst {
     }
   }, 300);
   install() {
-    this.EventListenersMap.push(vscode.workspace.onDidChangeTextDocument(this.transformASTActiveEditor), vscode.workspace.onDidOpenTextDocument(this.transformAST), vscode.window.onDidChangeActiveTextEditor(this.transformASTActiveEditor));
+    this.EventListenersMap.push(vscode.workspace.onDidChangeTextDocument(this.transformASTActiveEditor), vscode.workspace.onDidOpenTextDocument(this.transformAST), vscode.window.onDidChangeActiveTextEditor(this.transformASTActiveEditor), config.installConfiguration());
   }
   deactivate() {
     let task: Disposable;

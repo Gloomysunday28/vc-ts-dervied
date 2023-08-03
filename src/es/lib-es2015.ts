@@ -185,4 +185,5 @@ export const EsTSUtils = {
   * If a member contains nested objects, the nested objects are transformed before the parent object is.
   */
   parse: () => `parse(text: string, reviver?: (this: any, key: string, value: any) => any): any`,
+  includes: () => 'boolean'
 };
