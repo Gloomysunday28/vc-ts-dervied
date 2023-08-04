@@ -6,8 +6,8 @@ import {
   baseTsAstMaps,
 } from "./generateTsAstMaps";
 import type { Node, Flow, TSType, CallExpression } from "@babel/types";
-import type { UnionFlowType } from "../interface";
-import handleTsAst, { handleRerencePath } from "./handleTsAst";
+import type { UnionFlowType } from "../../interface";
+import { handleRerencePath } from "./handleTsAst";
 const t = require("@babel/types");
 
 const getNodeProperty = {

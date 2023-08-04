@@ -1,7 +1,7 @@
 import { EsTSUtils } from '../../es/lib-es2015';
 import template from '@babel/template';
 import * as t from '@babel/types';
-import handleTsAst from '../../utils/handleTsAst';
+import handleTsAst from '../../utils/tsTypes/handleTsAst';
 
 export const esRender = {
   renderESGeneric(property) {

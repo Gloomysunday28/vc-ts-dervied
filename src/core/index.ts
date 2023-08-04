@@ -21,6 +21,7 @@ export default class CoreTypeAst {
     }
   }, 300);
   install() {
+    globalThis.exportsIndentifer = {}
     this.EventListenersMap.push(vscode.workspace.onDidChangeTextDocument(this.transformASTActiveEditor), vscode.workspace.onDidOpenTextDocument(this.transformAST), vscode.window.onDidChangeActiveTextEditor(this.transformASTActiveEditor), config.installConfiguration());
   }
   deactivate() {

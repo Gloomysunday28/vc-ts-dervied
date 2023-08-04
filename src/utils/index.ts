@@ -37,12 +37,12 @@ export default {
       }
     };
   },
-  transformAST() {
+  transformAST(astVisitors = visitors, fsContent?: string) {
     try {
       bullet.clearDecorateBullet();
       const auditor = vscode.window.activeTextEditor;
-      const code = auditor.document.getText();
-      traverseAst(parseAst(code), visitors);
+      const code = fsContent || auditor.document.getText();
+      traverseAst(parseAst(code), astVisitors);
       bullet.renderTextDocument();
       initGlobalThis();
     } catch(err) {

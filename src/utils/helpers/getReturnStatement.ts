@@ -1,5 +1,5 @@
 import * as t from "@babel/types";
-import handleTsAst from "../handleTsAst";
+import handleTsAst from "../tsTypes/handleTsAst";
 
 export default {
   TryStatement(TryStatement: t.TryStatement[], path, returnBullet: t.ReturnStatement[]) {

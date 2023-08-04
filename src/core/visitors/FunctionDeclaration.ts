@@ -1,6 +1,5 @@
-import { generateTsTypeMaps } from "../../utils/generateTsAstMaps";
-import handleTsAst from "../../utils/handleTsAst";
-import * as resolvePath from 'path';
+import { generateTsTypeMaps } from "../../utils/tsTypes/generateTsAstMaps";
+import handleTsAst from "../../utils/tsTypes/handleTsAst";
 import { type TSType } from "@babel/types";
 import bullet from "../render/bullet";
 import * as generate from "@babel/generator";
