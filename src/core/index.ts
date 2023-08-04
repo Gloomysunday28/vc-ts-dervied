@@ -21,8 +21,11 @@ export default class CoreTypeAst {
     }
   }, 300);
   install() {
-    globalThis.exportsIndentifer = {}
-    this.EventListenersMap.push(vscode.workspace.onDidChangeTextDocument(this.transformASTActiveEditor), vscode.workspace.onDidOpenTextDocument(this.transformAST), vscode.window.onDidChangeActiveTextEditor(this.transformASTActiveEditor), config.installConfiguration());
+    globalThis.exportsIndentifer = {};
+    this.EventListenersMap.push(vscode.workspace.onDidChangeTextDocument(this.transformASTActiveEditor), vscode.workspace.onDidOpenTextDocument(this.transformAST), vscode.window.onDidChangeActiveTextEditor((...args) => {
+      globalThis.exportsIndentifer = {};
+      this.transformASTActiveEditor(...args);
+    }), config.installConfiguration());
   }
   deactivate() {
     let task: Disposable;

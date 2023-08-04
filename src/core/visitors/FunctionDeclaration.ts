@@ -9,6 +9,7 @@ import generic from "../../utils/helpers/generic";
 import unknownRender from "../render/unknown";
 import { unionUtils } from "../../utils/helpers/union";
 import config from '../config';
+import exportTsAst from '../../utils/tsTypes/exportTsAst';
 
 /**
  * @description 兼容async await语法的TypeReference
@@ -108,6 +109,15 @@ export function getReturnBulletTypeAnnotation(returnAstNode, path, async) {
       }
 
       if (t.isIdentifier(argument)) {
+        const typeAnnotation =  exportTsAst(argument, argument, path);
+        if (typeAnnotation) {
+          return {
+            content: {
+              typeAnnotation,
+            },
+            type: 'exportIdentifier'// filterStr时使用
+          };
+        }
         const bindScopePath = path.scope.bindings[argument.name];
         const returnTypeReference = handleTsAst.Identifier(
           bindScopePath,

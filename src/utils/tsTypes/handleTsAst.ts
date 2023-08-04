@@ -5,6 +5,7 @@ import { UnionFlowType, SureFlowType } from "../../interface";
 import * as t from "@babel/types";
 import loopPath from '../helpers/loopPath';
 import getReturnStatement from "../helpers/getReturnStatement";
+import exportTsAst from "./exportTsAst";
 import type { IdentifierOptions } from '../../interface/handleAst';
 
 // 当tsAstTypes收集到所有类型后, 开始做预后联合，将重复属性拼凑为联合类型

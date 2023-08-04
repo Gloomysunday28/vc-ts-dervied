@@ -282,6 +282,12 @@ const generateTsTypeMap: {
   ) => {
     const { property, object } = node;
     const { parent } = path;
+
+    const typeAnnotation = exportTsAst(object, property, path)
+    if (typeAnnotation) {
+      return typeAnnotation
+    }
+
     if (t.isIdentifier(property)) {
       if (parent.right) {
         const { name } = property;
@@ -300,11 +306,6 @@ const generateTsTypeMap: {
     } else if (property.type === "PrivateName") {
     } else {
       // expression 表达式
-    }
-
-    const typeAnnotation = exportTsAst(object, property, path)
-    if (typeAnnotation) {
-      return typeAnnotation
     }
 
     if (generateTsTypeMap[object.type]) {
@@ -405,6 +406,10 @@ const generateTsTypeMap: {
     const isBaseIdentifier = baseTsAstMaps.find(baseTSType => baseTSType.startsWith(node.name))
     if (isBaseIdentifier) {
       tsyTypes.push(generateTsTypeMap[isBaseIdentifier]())
+    }
+    const typeAnnotation =  exportTsAst(node, node, path)
+    if (typeAnnotation) {
+      return typeAnnotation
     }
     handleTsAst.Identifier(path.scope.getBinding(node.name), tsyTypes, option)
     if (tsyTypes.length) {
