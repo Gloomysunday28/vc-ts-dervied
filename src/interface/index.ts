@@ -11,7 +11,7 @@ export type UnionTSType<T extends Node, Key extends Node['type']> = T extends T 
 // 判断类型
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export function SureFlowType<T, U extends T = T>(params: T): params is U {
-  return !!(params as U)
+  return !!(params as U);
 }
 
 // 字符串大写

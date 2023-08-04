@@ -69,7 +69,7 @@ export const handlePath = (referencePath, tsAstTypes, options?: IdentifierOption
       if (node.typeAnnotation) {
         tsAstTypes.push(node.typeAnnotation);
       } else if (t.isVariableDeclarator(node) && (node.id as any)?.typeAnnotation) {
-        const { id } = node
+        const { id } = node;
         tsAstTypes.push((id as any).typeAnnotation);
       } else if (handleTsAstMaps[node.type]) {
         handleTsAstMaps[node.type]?.(node, tsAstTypes, referencePath?.path, options);
@@ -100,9 +100,9 @@ export const handlePath = (referencePath, tsAstTypes, options?: IdentifierOption
       }
       if (tsAstTypes.length) {
         if (tsAstTypes.length === 1) {
-          return tsAstTypes[0]
+          return tsAstTypes[0];
         } else {
-          return t.tsUnionType(tsAstTypes)
+          return t.tsUnionType(tsAstTypes);
         }
       }
     }
@@ -133,7 +133,7 @@ export default {
     if (!body && node.type) {
       returnBullet.push({
         bulletTypeAnnotation: generateTsTypeMaps[node.type]?.(node, path)
-      })
+      });
     }
     let returnStatement: Node;
     if (
@@ -146,12 +146,12 @@ export default {
 
     const TryStatement = body?.filter((node: Node) => t.isTryStatement(node)) as t.TryStatement[];
     if (TryStatement) {
-      returnBullet = getReturnStatement.TryStatement(TryStatement, path, returnBullet)
+      returnBullet = getReturnStatement.TryStatement(TryStatement, path, returnBullet);
     }
 
     const IfStatement = body?.filter((node: Node) => t.isIfStatement(node)) as t.IfStatement[];
     if (IfStatement?.length) {
-      returnBullet = getReturnStatement.IfStatement(IfStatement, path, returnBullet)
+      returnBullet = getReturnStatement.IfStatement(IfStatement, path, returnBullet);
     }
 
     const SwitchStatement = body?.filter((node: Node) => t.isSwitchStatement(node)) as t.SwitchStatement[];
