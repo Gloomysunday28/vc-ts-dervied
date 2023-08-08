@@ -459,6 +459,13 @@ const generateTsTypeMap: {
     const { consequent, alternate } = node
 
     return unionUtils.IntegrateTSTypeToUnionType([generateTsTypeMap[consequent.type]?.(consequent, path), generateTsTypeMap[alternate.type]?.(alternate, path)])
+  },
+  UnaryExpression(node: UnionFlowType<Node, 'UnaryExpression'>, path) {
+    const { operator } = node
+
+    if (operator === 'void') {
+      return t.tsVoidKeyword()
+    }
   }
 };
 

@@ -95,7 +95,7 @@ export function getReturnBulletTypeAnnotation(returnAstNode, path, async) {
         };
       }
 
-      if (t.isJSXElement(argument)) {
+      if (t.isJSXElement(argument) || t.isJSXFragment(argument)) {
         return {
           content: {
             typeAnnotation: t.memberExpression(
