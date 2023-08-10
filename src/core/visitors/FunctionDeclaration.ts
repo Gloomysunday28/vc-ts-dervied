@@ -87,6 +87,7 @@ export const FunctionDeclaration =
 export function getReturnBulletTypeAnnotation(returnAstNode, path, async) {
   const tsTypes = returnAstNode?.map((returnAstNode) => {
     try {
+      globalThis.returnStatement = returnAstNode;
       const { argument } = returnAstNode || {};
 
       if ((returnAstNode as any).bulletTypeAnnotation) {

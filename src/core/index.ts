@@ -23,9 +23,11 @@ export default class CoreTypeAst {
   install() {
     globalThis.exportsIndentifer = {};
     globalThis.reactPropsAndState = {};
+    globalThis.returnStatement = null;
     this.EventListenersMap.push(vscode.workspace.onDidChangeTextDocument(this.transformASTActiveEditor), vscode.workspace.onDidOpenTextDocument(this.transformAST), vscode.window.onDidChangeActiveTextEditor((...args) => {
       globalThis.exportsIndentifer = {};
       globalThis.reactPropsAndState = {};
+      globalThis.returnStatement = null;
       this.transformASTActiveEditor(...args);
     }), config.installConfiguration());
   }

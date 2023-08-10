@@ -5,7 +5,6 @@ import type { KeyofObject, UnionFlowType } from "../../interface";
 import handleTsAst from "./handleTsAst";
 import { getReturnBulletTypeAnnotation } from '../../core/visitors/FunctionDeclaration'
 import operator from "../helpers/operator";
-import fs from '../../core/fs'
 import type {
   ObjectTypeProperty,
   ObjectTypeSpreadProperty,
@@ -17,11 +16,9 @@ import type {
 } from "@babel/types";
 import * as t from "@babel/types";
 import { esRender } from '../../core/render/es'
-import utils from "..";
 import { unionUtils } from '../helpers/union'
-import ExportDeclarationVisitor from "../../core/visitors/ExportDeclaration";
-import ExportTsTypesMap from "./exportTsTypesMap";
 import exportTsAst from '../../utils/tsTypes/exportTsAst'
+import reactTsAst from '../../utils/tsTypes/react'
 
 //  js类型与Flow ast映射关系 只针对该类型生成TSType
 const generateTsTypeMap: {
@@ -283,9 +280,9 @@ const generateTsTypeMap: {
     const { property, object } = node;
     const { parent } = path;
 
-    if (property?.name === 'props' || object.property?.name === 'props') {
-      const { props, state } = globalThis.reactPropsAndState || {}
-
+    const tsType = reactTsAst.getReactMemberExpression(node, path)
+    if (tsType) {
+      return tsType
     }
 
     const typeAnnotation = exportTsAst(object, property, path)
@@ -381,6 +378,7 @@ const generateTsTypeMap: {
     if (Array.isArray(elements)) {
       return t.tsTupleType(
         (elements as TSType[])?.map((ele) => {
+          globalThis.arrayExpressionElement = ele;
           if (t.isIdentifier(ele)) {
             const bindScopePath =
               path.scope.bindings[(ele as unknown as Identifier).name];
