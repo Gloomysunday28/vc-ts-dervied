@@ -131,7 +131,7 @@ export default {
    */
   ReturnStatement<T extends t.ReturnStatement>(node: t.FunctionDeclaration['body'], path, returnBullet = []): Array<T> {
     const { body } = node;
-    if (!body && node.type) {
+    if (!body && node.type) { // 没有return，箭头函数直接返回
       returnBullet.push({
         bulletTypeAnnotation: generateTsTypeMaps[node.type]?.(node, path)
       });

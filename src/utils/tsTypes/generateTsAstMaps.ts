@@ -283,6 +283,11 @@ const generateTsTypeMap: {
     const { property, object } = node;
     const { parent } = path;
 
+    if (property?.name === 'props' || object.property?.name === 'props') {
+      const { props, state } = globalThis.reactPropsAndState || {}
+
+    }
+
     const typeAnnotation = exportTsAst(object, property, path)
     if (typeAnnotation) {
       return typeAnnotation

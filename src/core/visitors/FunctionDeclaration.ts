@@ -10,6 +10,7 @@ import unknownRender from "../render/unknown";
 import { unionUtils } from "../../utils/helpers/union";
 import config from '../config';
 import exportTsAst from '../../utils/tsTypes/exportTsAst';
+import reactStateAndProps from '../../utils/tsTypes/react';
 
 /**
  * @description 兼容async await语法的TypeReference
@@ -183,6 +184,10 @@ export function traverseFunctionDeclartion(path) {
   const returnAstNode = handleTsAst.ReturnStatement(body, path);
   try {
     if (returnAstNode.length) {
+      const reactPropsAndState = reactStateAndProps.getClassPropsAndState(path);
+      if (reactPropsAndState) {
+        globalThis.reactPropsAndState = reactPropsAndState;
+      }
       const { tsTypes, references } = getReturnBulletTypeAnnotation(returnAstNode, path, async);
 
       if (tsTypes.length && references) {
