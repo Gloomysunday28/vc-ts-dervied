@@ -57,7 +57,6 @@ const handleTsAstMaps = {
     node: UnionFlowType<Node, "VariableDeclarator">,
     tsAstTypes: Flow[],
     path,
-    options?
   ) => {
     const { init, id } = node;
 

@@ -185,5 +185,6 @@ export const EsTSUtils = {
   * If a member contains nested objects, the nested objects are transformed before the parent object is.
   */
   parse: () => `any`,
-  includes: () => 'boolean'
+  includes: () => 'boolean',
+  stringify: () => 'string',
 };

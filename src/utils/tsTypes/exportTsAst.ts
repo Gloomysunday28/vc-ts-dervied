@@ -46,9 +46,8 @@ export default function (object, property, path) {
             }
           }
         }
+        return typeAnnotation;
       }
-
-      return typeAnnotation;
     }
 
     const referencePath = path.scope.getAllBindings()[object.name];
