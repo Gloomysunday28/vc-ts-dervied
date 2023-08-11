@@ -46210,6 +46210,7 @@ const interface_1 = __webpack_require__(189);
 const t = __webpack_require__(10);
 const loopPath_1 = __webpack_require__(190);
 const getReturnStatement_1 = __webpack_require__(191);
+const union_1 = __webpack_require__(193);
 // 当tsAstTypes收集到所有类型后, 开始做预后联合，将重复属性拼凑为联合类型
 const postmathClassMethodTsAst = (tsAstTypes) => {
     const redundancFlowMap = new Map();
@@ -46281,16 +46282,9 @@ const handlePath = (referencePath, tsAstTypes, options) => {
         else {
             if (!collectTSLock) {
                 (0, exports.handleRerencePath)(restReferencePaths, tsAstTypes);
-                (0, exports.handleRerencePath)(referencePath.constantViolations, tsAstTypes);
             }
-            if (tsAstTypes.length) {
-                if (tsAstTypes.length === 1) {
-                    return tsAstTypes[0];
-                }
-                else {
-                    return t.tsUnionType(tsAstTypes);
-                }
-            }
+            (0, exports.handleRerencePath)(referencePath.constantViolations, tsAstTypes);
+            return union_1.unionUtils.UnionType(tsAstTypes);
         }
     }
     else {
@@ -46589,7 +46583,7 @@ exports.unionUtils = {
             }
             else {
                 return {
-                    typeAnnotation: t.tsUnionType(tsyTypes.map(params => t.isTSTypeAnnotation(params.typeAnnotation) ? params.typeAnnotation.typeAnnotation : params.typeAnnotation)),
+                    typeAnnotation: t.tsUnionType(tsyTypes.flatMap(params => t.isTSTypeAnnotation(params.typeAnnotation) ? params.typeAnnotation.typeAnnotation : (t.isTSUnionType(params.typeAnnotation) ? params.typeAnnotation.types : params.typeAnnotation))),
                     isMaxSizeee: tsyTypes.find(t => t.isMaxSizeee)
                 };
             }

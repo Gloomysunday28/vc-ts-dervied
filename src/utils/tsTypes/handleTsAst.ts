@@ -7,6 +7,7 @@ import loopPath from '../helpers/loopPath';
 import getReturnStatement from "../helpers/getReturnStatement";
 import exportTsAst from "./exportTsAst";
 import type { IdentifierOptions } from '../../interface/handleAst';
+import { unionUtils } from "../helpers/union";
 
 // 当tsAstTypes收集到所有类型后, 开始做预后联合，将重复属性拼凑为联合类型
 const postmathClassMethodTsAst = (tsAstTypes: TSType[]) => {
@@ -97,15 +98,9 @@ export const handlePath = (referencePath, tsAstTypes, options?: IdentifierOption
     } else {
       if (!collectTSLock) {
         handleRerencePath(restReferencePaths, tsAstTypes);
-        handleRerencePath(referencePath.constantViolations, tsAstTypes);
       }
-      if (tsAstTypes.length) {
-        if (tsAstTypes.length === 1) {
-          return tsAstTypes[0];
-        } else {
-          return t.tsUnionType(tsAstTypes);
-        }
-      }
+      handleRerencePath(referencePath.constantViolations, tsAstTypes);
+      return unionUtils.UnionType(tsAstTypes);
     }
   } else {
     return t.tsVoidKeyword();
