@@ -47056,13 +47056,12 @@ class Bullet {
                 color: "#69676c",
                 textDecoration: "none",
             },
-            isWholeLine: true,
             rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
         });
     }
     clearDecorateBullet() {
         if (this.decorateBullet.length) {
-            this.renderTextDocument('clear');
+            this.renderTextDocument("clear");
             this.decorateBullet.length = 0;
         }
     }
@@ -47070,20 +47069,20 @@ class Bullet {
         const { content, async, name } = bullet;
         const length = content?.match(/(\n)/g)?.length;
         if (length) {
-            const genericName = `${string_1.default.uppcase(async ? name.slice(0, -1) : name)}ReturnType${async ? '>' : ''}`;
-            bullet.hoverMessage = new vscode.MarkdownString('类型详细情况如下 \n', true);
+            const genericName = `${string_1.default.uppcase(async ? name.slice(0, -1) : name)}ReturnType${async ? ">" : ""}`;
+            bullet.hoverMessage = new vscode.MarkdownString("类型详细情况如下 \n", true);
             bullet.hoverMessage.supportHtml = true;
             bullet.hoverMessage.isTrusted = true;
             bullet.hoverMessage.appendCodeblock(format_1.default.formatCode(content.slice(2), {
-                prefix: `interface ${genericName} ${string_1.default.filterStr(bullet.type, '{', '', '\n')}`,
+                prefix: `interface ${genericName} ${string_1.default.filterStr(bullet.type, "{", "", "\n")}`,
                 reg: /\n/g,
-                replacePrefix: '\n',
-                format: "\t".repeat(bullet.type === 'TSTypeLiteral' ? 0 : 1),
+                replacePrefix: "\n",
+                format: "\t".repeat(bullet.type === "TSTypeLiteral" ? 0 : 1),
                 postfix: `\n${string_1.default.filterStr(bullet.type, `}`)}${author_1.default}`,
             }));
-            bullet.content = string_1.default.padStart(genericName, ': ');
+            bullet.content = string_1.default.padStart(genericName, ": ");
         }
-        bullet.content = string_1.default.padEnd(bullet.content, ' ');
+        bullet.content = string_1.default.padEnd(bullet.content, " ");
         return bullet;
     }
     addDecorateBullet(decorateBullet) {
@@ -47093,17 +47092,21 @@ class Bullet {
         }
     }
     renderTextDocument(type) {
-        const isClear = type === 'clear';
+        const isClear = type === "clear";
         const auditor = vscode.window.activeTextEditor;
-        const range = isClear ? [] : this.decorateBullet.map((bullet) => ({
-            renderOptions: {
-                after: {
-                    contentText: bullet.content,
+        const range = isClear
+            ? []
+            : this.decorateBullet.map((bullet) => ({
+                renderOptions: {
+                    after: {
+                        contentText: bullet.content,
+                    },
                 },
-            },
-            range: auditor.document.validateRange(new vscode.Range(bullet.position, bullet.position)),
-            hoverMessage: bullet.hoverMessage,
-        }));
+                range: auditor.document.validateRange(new vscode.Range(new vscode.Position(bullet.position.line, bullet.hoverMessage
+                    ? bullet.position.character + 1
+                    : bullet.position.character - 1), bullet.position)),
+                hoverMessage: bullet.hoverMessage,
+            }));
         auditor.setDecorations(this.annotationDecoration, range);
     }
 }
