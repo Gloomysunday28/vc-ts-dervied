@@ -6,7 +6,7 @@ import ExportTsTypesMap from "./exportTsTypesMap";
 
 export default function (object, property, path) {
   if (t.isIdentifier(object)) {
-    const identifierPath = path.scope.getBinding(object.name).identifier;
+    const identifierPath = path.scope.getBinding(object.name)?.identifier;
     const typeAnnotation = identifierPath.typeAnnotation?.typeAnnotation;
 
     if (typeAnnotation) {

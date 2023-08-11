@@ -19,7 +19,7 @@ export default class CoreTypeAst {
     if (this.fileToTransform(textEditor?.document?.uri?._fsPath || '')) {
       utils.transformAST();
     }
-  }, 300);
+  }, 1000);
   install() {
     globalThis.exportsIndentifer = {};
     globalThis.reactPropsAndState = {};

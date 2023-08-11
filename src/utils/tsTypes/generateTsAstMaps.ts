@@ -417,7 +417,8 @@ const generateTsTypeMap: {
     handleTsAst.Identifier(path.scope.getBinding(node.name), tsyTypes, option)
     if (tsyTypes.length) {
       if (tsyTypes.length === 1) {
-        return tsyTypes[0]
+        const tsType = tsyTypes[0]
+        return t.isTSTypeAnnotation(tsType) ? tsType.typeAnnotation : tsType
       } else {
         return t.tsUnionType(tsyTypes)
       }
