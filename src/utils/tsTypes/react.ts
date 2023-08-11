@@ -95,7 +95,7 @@ export default {
     const { property, object, keys } = this.getPropsAndStateMemberExpression(node, path);
     if (object.property?.name === 'props' || property?.name === 'props' || object.property?.name === 'state' || property?.name === 'state') {
       const { props, state } = globalThis.reactPropsAndState || {}
-    
+
       if (props) {
         const { body: { body = [] }} = props
         const tsType = body.find(tsTypeParam => tsTypeParam?.key?.name ===  (property?.name === 'props' ? globalThis?.returnStatement?.argument?.name : property.name))

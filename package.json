@@ -2,7 +2,7 @@
   "name": "t-typescript-auto-derive",
   "displayName": "Typescript-Auto-Derive",
   "description": "",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "publisher": "mrCai",
   "engines": {
     "vscode": "^1.80.0"
