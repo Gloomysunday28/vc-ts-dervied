@@ -78,7 +78,7 @@ function typePromiseOrAnnotation(
           )
         )
       )
-    : t.tsTypeAnnotation(annotation as t.TSType);
+    : t.tsTypeAnnotation(t.isTSType(annotation) ? annotation as t.TSType : t.tsTypeReference(annotation.id));
 }
 
 export const FunctionDeclaration =

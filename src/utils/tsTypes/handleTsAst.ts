@@ -85,7 +85,7 @@ export const handlePath = (referencePath, tsAstTypes, options?: IdentifierOption
   const restReferencePaths = referencePath.referencePaths?.filter(
     (path) => path.key !== "body" && path.key !== "right" && !t.isReturnStatement(path.container)
   );
-  if (tsAstTypes.length) {
+  if (tsAstTypes?.filter(Boolean).length) {
     const returnASTNode = tsAstTypes[0];
     if (returnASTNode.members && returnASTNode.members?.length) {
       if (returnASTNode?.members.length > 1) {

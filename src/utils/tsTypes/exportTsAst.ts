@@ -7,7 +7,7 @@ import ExportTsTypesMap from "./exportTsTypesMap";
 export default function (object, property, path) {
   if (t.isIdentifier(object)) {
     const identifierPath = path.scope.getBinding(object.name)?.identifier;
-    const typeAnnotation = identifierPath.typeAnnotation?.typeAnnotation;
+    const typeAnnotation = identifierPath?.typeAnnotation?.typeAnnotation;
 
     if (typeAnnotation) {
       const isReference = t.isTSTypeReference(typeAnnotation);
@@ -65,6 +65,8 @@ export default function (object, property, path) {
         );
         if (typeAnnotation) {
           return typeAnnotation;
+        } else {
+          return exportIndentiferNode;
         }
       } else if (content) {
         utils.transformAST(
@@ -82,6 +84,8 @@ export default function (object, property, path) {
           );
           if (typeAnnotation) {
             return typeAnnotation;
+          } else {
+            return exportIndentiferNode;
           }
         }
       }

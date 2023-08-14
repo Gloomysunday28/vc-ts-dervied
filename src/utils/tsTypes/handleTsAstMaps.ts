@@ -65,7 +65,7 @@ const handleTsAstMaps = {
     }
 
     if (generateTsTypeMaps[init.type]) {
-      tsAstTypes.push(generateTsTypeMaps[init.type]?.(init, path));
+      tsAstTypes.push(generateTsTypeMaps[init.type]?.(init, path) || t.tsUnknownKeyword());
     }
   },
   AwaitExpression(
