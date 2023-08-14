@@ -35,6 +35,6 @@ export const unionUtils = {
       }
     }).flat(Infinity) as t.TSType[];
 
-    return t.tsUnionType(utils.dedupArray(untionTypes, 'type'));
+    return t.tsUnionType(untionTypes);
   }
 };

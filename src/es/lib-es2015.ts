@@ -187,4 +187,5 @@ export const EsTSUtils = {
   parse: () => `any`,
   includes: () => 'boolean',
   stringify: () => 'string',
+  isArray: () => 'boolean',
 };

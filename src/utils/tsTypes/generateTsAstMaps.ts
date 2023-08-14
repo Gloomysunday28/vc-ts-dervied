@@ -66,6 +66,10 @@ const generateTsTypeMap: {
       return generateTsTypeMap[literal.type](literal, path)
     }
   },
+  TSPropertySignature(tsType: UnionFlowType<TSType, 'TSPropertySignature'>) {
+    const { typeAnnotation: { typeAnnotation } } = tsType
+    return typeAnnotation
+  },
   ParamterDeclaration: (params: UnionFlowType<Node, "Identifier">[]) => {
     return t.typeParameterDeclaration(
       params.map((param) =>
@@ -195,14 +199,26 @@ const generateTsTypeMap: {
       if (!properties.length) {
         return t.tsTypeReference(t.identifier('Record'), t.tsTypeParameterInstantiation([t.tsStringKeyword(), t.tsAnyKeyword()]))
       }
-      return t.TSTypeLiteral(
-        properties.map(
+      let spreadElementProperties = []
+      const spreadElement = properties?.filter(pro => t.isSpreadElement(pro))
+      const propertiesElement = properties?.filter(pro => !t.isSpreadElement(pro))
+      if (spreadElement.length) {
+        spreadElementProperties = spreadElement.map(spread => {
+          return generateTsTypeMap[spread?.type]?.(
+            spread,
+            path
+          )
+        })
+        globalThis.isSpreadElement = false
+      }
+      return t.tsTypeLiteral(
+        (propertiesElement.map(
           (propert: ObjectTypeProperty | ObjectTypeSpreadProperty) => {
             let keyName = (((propert as ObjectTypeProperty).key as Identifier)?.name ||
-            (propert as ObjectTypeProperty).key) as string
-            if ((propert as ObjectTypeProperty).key) {
+            (propert as ObjectTypeProperty).key) as string || ((propert as ObjectTypeProperty).argument)?.name as string
+            if ((propert as ObjectTypeProperty).key || propert.argument) {
               if (propert.computed) {
-                const scopeIdnetifier = path.scope.getAllBindings()?.[propert.key.name]
+                const scopeIdnetifier = path.scope.getAllBindings()?.[keyName]
                 if (scopeIdnetifier) {
                     const value = generateTsTypeMap[scopeIdnetifier.path.node.type]?.(scopeIdnetifier.path.node, path)
                   if (t.isTSLiteralType(value)) {
@@ -213,20 +229,37 @@ const generateTsTypeMap: {
               const tsType = t.tsPropertySignature(
                 t.stringLiteral(keyName),
                 t.tsTypeAnnotation(
-                  generateTsTypeMap[(propert as ObjectTypeProperty).value.type]?.(
-                    propert.value,
+                  generateTsTypeMap[(propert as ObjectTypeProperty).value?.type || propert?.type]?.(
+                    propert?.value || propert,
                     path
                   )
                 )
               );
-
               tsType.optional =
                 option?.optional || t.isOptionalMemberExpression(propert.value);
               return tsType;
             }
           }
-        ) as Array<ObjectTypeProperty | ObjectTypeSpreadProperty>
+        ) as Array<ObjectTypeProperty | ObjectTypeSpreadProperty>).concat(spreadElementProperties?.map(property => {
+          return property.members
+        }).flat(Infinity))
       );
+    }
+  },
+  SpreadElement(node: UnionFlowType<Node, 'SpreadElement'>, path) {
+    const { argument } = node
+
+    globalThis.isSpreadElement = true
+    if (t.isIdentifier(argument)) {
+      const tsType = reactTsAst.getReactMemberExpression(argument, path)
+      if (tsType) {
+        return tsType
+      }
+  
+      const typeAnnotation = exportTsAst(argument, argument, path)
+      if (typeAnnotation) {
+        return typeAnnotation
+      }
     }
   },
   ArrowFunctionExpression: (
