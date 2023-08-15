@@ -144,6 +144,7 @@ export default {
     if (TryStatement) {
       returnBullet = getReturnStatement.TryStatement(TryStatement, path, returnBullet);
     }
+    
 
     const IfStatement = body?.filter((node: Node) => t.isIfStatement(node)) as t.IfStatement[];
     if (IfStatement?.length) {

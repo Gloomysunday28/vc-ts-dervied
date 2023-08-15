@@ -10,7 +10,12 @@ export default {
         if (returnStatement = handleTsAst.ReturnStatement(TryStatement.block, path)) {
           returnBullet = returnBullet.concat(returnStatement as t.ReturnStatement[]);
         }
-      })
+
+        const handlerStatement = handleTsAst.ReturnStatement(TryStatement?.handler?.body, path)
+        if (handlerStatement) {
+          returnBullet = returnBullet.concat(handlerStatement as t.ReturnStatement[]);
+        }
+      });
     }
 
     return returnBullet;

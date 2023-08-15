@@ -3,7 +3,7 @@
 import type { GenerateTsAstMapsOption } from "../../interface/generateTsAstMapsDto";
 import type { KeyofObject, UnionFlowType } from "../../interface";
 import handleTsAst from "./handleTsAst";
-import { getReturnBulletTypeAnnotation } from '../../core/visitors/FunctionDeclaration'
+import { getReturnBulletTypeAnnotation } from "../../core/visitors/FunctionDeclaration";
 import operator from "../helpers/operator";
 import type {
   ObjectTypeProperty,
@@ -15,10 +15,10 @@ import type {
   TSType, // TSType
 } from "@babel/types";
 import * as t from "@babel/types";
-import { esRender } from '../../core/render/es'
-import { unionUtils } from '../helpers/union'
-import exportTsAst from '../../utils/tsTypes/exportTsAst'
-import reactTsAst from '../../utils/tsTypes/react'
+import { esRender } from "../../core/render/es";
+import { unionUtils } from "../helpers/union";
+import exportTsAst from "../../utils/tsTypes/exportTsAst";
+import reactTsAst from "../../utils/tsTypes/react";
 
 //  js类型与Flow ast映射关系 只针对该类型生成TSType
 const generateTsTypeMap: {
@@ -59,16 +59,18 @@ const generateTsTypeMap: {
   TSBooleanKeyword: (node: UnionFlowType<Node, "BooleanLiteral">) => {
     return node ? t.tsLiteralType(node) : t.TSBooleanKeyword();
   },
-  TSLiteralType: (node: UnionFlowType<Node, 'TSLiteralType'>, path) => {
-    const { literal } = node
+  TSLiteralType: (node: UnionFlowType<Node, "TSLiteralType">, path) => {
+    const { literal } = node;
 
     if (literal) {
-      return generateTsTypeMap[literal.type](literal, path)
+      return generateTsTypeMap[literal.type](literal, path);
     }
   },
-  TSPropertySignature(tsType: UnionFlowType<TSType, 'TSPropertySignature'>) {
-    const { typeAnnotation: { typeAnnotation } } = tsType
-    return typeAnnotation
+  TSPropertySignature(tsType: UnionFlowType<TSType, "TSPropertySignature">) {
+    const {
+      typeAnnotation: { typeAnnotation },
+    } = tsType;
+    return typeAnnotation;
   },
   ParamterDeclaration: (params: UnionFlowType<Node, "Identifier">[]) => {
     return t.typeParameterDeclaration(
@@ -117,13 +119,15 @@ const generateTsTypeMap: {
     );
   },
   AwaitExpression(node: UnionFlowType<Node, "AwaitExpression">, path) {
-    const { argument } = node
+    const { argument } = node;
 
     if ((argument as CallExpression).typeParameters) {
-      return unionUtils.UnionType((argument as CallExpression).typeParameters.params)
+      return unionUtils.UnionType(
+        (argument as CallExpression).typeParameters.params
+      );
     }
     // TODO:
-    return t.tsUnknownKeyword()
+    return t.tsUnknownKeyword();
   },
   VariableDeclarator: (
     node: UnionFlowType<Node, "VariableDeclarator">,
@@ -160,7 +164,7 @@ const generateTsTypeMap: {
         );
         const promiseArgument = promiseStatusfn?.expression?.arguments?.[0];
         if (promiseArgument) {
-          returnType = generateTsTypeMap[promiseArgument.type](promiseArgument)
+          returnType = generateTsTypeMap[promiseArgument.type](promiseArgument);
         }
       }
       if (returnStatement && t.isCallExpression(returnStatement.argument)) {
@@ -197,69 +201,88 @@ const generateTsTypeMap: {
     } else {
       const { properties } = node;
       if (!properties.length) {
-        return t.tsTypeReference(t.identifier('Record'), t.tsTypeParameterInstantiation([t.tsStringKeyword(), t.tsAnyKeyword()]))
+        return t.tsTypeReference(
+          t.identifier("Record"),
+          t.tsTypeParameterInstantiation([
+            t.tsStringKeyword(),
+            t.tsAnyKeyword(),
+          ])
+        );
       }
-      let spreadElementProperties = []
-      const spreadElement = properties?.filter(pro => t.isSpreadElement(pro))
-      const propertiesElement = properties?.filter(pro => !t.isSpreadElement(pro))
+      let spreadElementProperties = [];
+      const spreadElement = properties?.filter((pro) => t.isSpreadElement(pro));
+      const propertiesElement = properties?.filter(
+        (pro) => !t.isSpreadElement(pro)
+      );
       if (spreadElement.length) {
-        spreadElementProperties = spreadElement.map(spread => {
-          return generateTsTypeMap[spread?.type]?.(
-            spread,
-            path
-          )
-        })
-        globalThis.isSpreadElement = false
+        spreadElementProperties = spreadElement.map((spread) => {
+          return generateTsTypeMap[spread?.type]?.(spread, path);
+        });
+        globalThis.isSpreadElement = false;
       }
       return t.tsTypeLiteral(
-        (propertiesElement.map(
-          (propert: ObjectTypeProperty | ObjectTypeSpreadProperty) => {
-            let keyName = (((propert as ObjectTypeProperty).key as Identifier)?.name ||
-            (propert as ObjectTypeProperty).key) as string || ((propert as ObjectTypeProperty).argument)?.name as string
-            if ((propert as ObjectTypeProperty).key || propert.argument) {
-              if (propert.computed) {
-                const scopeIdnetifier = path.scope.getAllBindings()?.[keyName]
-                if (scopeIdnetifier) {
-                    const value = generateTsTypeMap[scopeIdnetifier.path.node.type]?.(scopeIdnetifier.path.node, path)
-                  if (t.isTSLiteralType(value)) {
-                    keyName = value.literal.value
+        (
+          propertiesElement.map(
+            (propert: ObjectTypeProperty | ObjectTypeSpreadProperty) => {
+              let keyName =
+                ((((propert as ObjectTypeProperty).key as Identifier)?.name ||
+                  (propert as ObjectTypeProperty).key) as string) ||
+                ((propert as ObjectTypeProperty).argument?.name as string);
+              if ((propert as ObjectTypeProperty).key || propert.argument) {
+                if (propert.computed) {
+                  const scopeIdnetifier =
+                    path.scope.getAllBindings()?.[keyName];
+                  if (scopeIdnetifier) {
+                    const value = generateTsTypeMap[
+                      scopeIdnetifier.path.node.type
+                    ]?.(scopeIdnetifier.path.node, path);
+                    if (t.isTSLiteralType(value)) {
+                      keyName = value.literal.value;
+                    }
                   }
                 }
-              }
-              const tsType = t.tsPropertySignature(
-                t.stringLiteral(keyName),
-                t.tsTypeAnnotation(
-                  generateTsTypeMap[(propert as ObjectTypeProperty).value?.type || propert?.type]?.(
-                    propert?.value || propert,
-                    path
+                const tsType = t.tsPropertySignature(
+                  t.stringLiteral(keyName),
+                  t.tsTypeAnnotation(
+                    generateTsTypeMap[
+                      (propert as ObjectTypeProperty).value?.type ||
+                        propert?.type
+                    ]?.(propert?.value || propert, path)
                   )
-                )
-              );
-              tsType.optional =
-                option?.optional || t.isOptionalMemberExpression(propert.value);
-              return tsType;
+                );
+                tsType.optional =
+                  option?.optional ||
+                  t.isOptionalMemberExpression(propert.value);
+                return tsType;
+              }
             }
-          }
-        ) as Array<ObjectTypeProperty | ObjectTypeSpreadProperty>).concat(spreadElementProperties?.map(property => {
-          return property.members
-        }).flat(Infinity))
+          ) as Array<ObjectTypeProperty | ObjectTypeSpreadProperty>
+        ).concat(
+          spreadElementProperties
+            ?.map((property) => {
+              return property.members || [];
+            })
+            .flat(Infinity)
+        )
       );
     }
   },
-  SpreadElement(node: UnionFlowType<Node, 'SpreadElement'>, path) {
-    const { argument } = node
+  SpreadElement(node: UnionFlowType<Node, "SpreadElement">, path) {
+    const { argument } = node;
 
-    globalThis.isSpreadElement = true
+    globalThis.isSpreadElement = true;
     if (t.isIdentifier(argument)) {
-      const tsType = reactTsAst.getReactMemberExpression(argument, path)
+      const tsType = reactTsAst.getReactMemberExpression(argument, path);
       if (tsType) {
-        return tsType
+        return tsType;
       }
-  
-      const typeAnnotation = exportTsAst(argument, argument, path)
+
+      const typeAnnotation = exportTsAst(argument, argument, path);
       if (typeAnnotation) {
-        return typeAnnotation
+        return typeAnnotation;
       }
+    } else {
+      return generateTsTypeMap[argument?.type]?.(argument, path)
     }
   },
   ArrowFunctionExpression: (
@@ -271,7 +294,11 @@ const generateTsTypeMap: {
 
     return t.tsFunctionType(
       paramsType,
-      params.map((param) => t.isRestElement(param) ? t.restElement(t.identifier(param.argument?.name)) : t.identifier(param.name)),
+      params.map((param) =>
+        t.isRestElement(param)
+          ? t.restElement(t.identifier(param.argument?.name))
+          : t.identifier(param.name)
+      ),
       t.tsTypeAnnotation(
         (t.isIdentifier(body)
           ? handleTsAst.Identifier(path.scope.getBinding(body.name), [])
@@ -279,18 +306,26 @@ const generateTsTypeMap: {
       )
     );
   },
-  BlockStatement(node: UnionFlowType<Flow, "ArrowFunctionExpression">['body'], path, options) {
-    const { references } = getReturnBulletTypeAnnotation(node.body, path, path.node?.async)
+  BlockStatement(
+    node: UnionFlowType<Flow, "ArrowFunctionExpression">["body"],
+    path,
+    options
+  ) {
+    const { references } = getReturnBulletTypeAnnotation(
+      node.body,
+      path,
+      path.node?.async
+    );
 
     if (references) {
-      return references.typeAnnotation
+      return references.typeAnnotation;
     }
 
     return t.tsUndefinedKeyword();
   },
   // 参数类型
   TsTypeParameterDeclaration: (params: UnionFlowType<Node, "Identifier">[]) => {
-    // t.isRestElement(param) ? t.restElement(param.argument.name, null, null, param.argument?.typeAnnotation?.typeAnnotation) 
+    // t.isRestElement(param) ? t.restElement(param.argument.name, null, null, param.argument?.typeAnnotation?.typeAnnotation)
     return t.tsTypeParameterDeclaration(
       params.map((param) => {
         const type = (
@@ -311,16 +346,16 @@ const generateTsTypeMap: {
     option?: GenerateTsAstMapsOption
   ) => {
     const { property, object } = node;
-    const { parent } = path;
+    const { parent } = path || {};
 
-    const tsType = reactTsAst.getReactMemberExpression(node, path)
+    const tsType = reactTsAst.getReactMemberExpression(node, path);
     if (tsType) {
-      return tsType
+      return tsType;
     }
 
-    const typeAnnotation = exportTsAst(object, property, path)
+    const typeAnnotation = exportTsAst(object, property, path);
     if (typeAnnotation) {
-      return typeAnnotation
+      return typeAnnotation;
     }
 
     if (t.isIdentifier(property)) {
@@ -335,19 +370,28 @@ const generateTsTypeMap: {
         tsType.optional = option.optional;
         return tsType;
       } else {
-        const tsType = esRender.renderESGeneric(property)
-        if (tsType) return tsType
+        const tsType = esRender.renderESGeneric(property, path);
+        if (tsType) return tsType;
       }
+
+      return t.tsUnknownKeyword();
     } else if (property.type === "PrivateName") {
     } else {
       // expression 表达式
     }
 
     if (generateTsTypeMap[object.type]) {
-      if ((t.isIdentifier(object) && option?.isReturnStatement) || !option?.isReturnStatement) {
-        const typeAnnotation = generateTsTypeMap[object.type]?.(object, path, option)
-  
-        if (typeAnnotation) return typeAnnotation
+      if (
+        (t.isIdentifier(object) && option?.isReturnStatement) ||
+        !option?.isReturnStatement
+      ) {
+        const typeAnnotation = generateTsTypeMap[object.type]?.(
+          object,
+          path,
+          option
+        );
+
+        if (typeAnnotation) return typeAnnotation;
       }
     }
   },
@@ -356,31 +400,13 @@ const generateTsTypeMap: {
     path: any,
     option?: GenerateTsAstMapsOption
   ) => {
-    const { property, object } = node;
-    const { parent } = path;
-    if (t.isIdentifier(property)) {
-      if (parent.right) {
-        const { name } = property;
-        const tsType = t.tsPropertySignature(
-          t.stringLiteral(name),
-          t.tsTypeAnnotation(
-            generateTsTypeMap[parent?.right?.type]?.(parent.right, path, option)
-          )
-        );
-        tsType.optional = option.optional;
-        return tsType;
-      } else {
-        const tsType = esRender.renderESGeneric(property)
-        if (tsType) return tsType
-      }
-    } else if (property.type === "PrivateName") {
-    } else {
-      // expression 表达式
+    const tsType = generateTsTypeMap.MemberExpression(node, path, option)
+    if (tsType) {
+      return tsType
     }
-
     if (t.isIdentifier(object)) {
       const identifierPath = path.scope.getBinding(object.name)?.identifier;
-      const typeAnnotation = identifierPath?.typeAnnotation?.typeAnnotation
+      const typeAnnotation = identifierPath?.typeAnnotation?.typeAnnotation;
 
       if (typeAnnotation) {
         return typeAnnotation;
@@ -388,14 +414,21 @@ const generateTsTypeMap: {
     }
 
     if (generateTsTypeMap[object.type]) {
-      if ((t.isIdentifier(object) && option?.isReturnStatement) || !option?.isReturnStatement) {
-        const typeAnnotation = generateTsTypeMap[object.type]?.(object, path, option)
-  
-        if (typeAnnotation) return typeAnnotation
+      if (
+        (t.isIdentifier(object) && option?.isReturnStatement) ||
+        !option?.isReturnStatement
+      ) {
+        const typeAnnotation = generateTsTypeMap[object.type]?.(
+          object,
+          path,
+          option
+        );
+
+        if (typeAnnotation) return typeAnnotation;
       }
     }
 
-    return t.tsUnknownKeyword()
+    return t.tsUnknownKeyword();
   },
   baseTsAstMapsExpression(node, type, option, path) {
     return baseTsAstMaps.includes(type)
@@ -431,79 +464,99 @@ const generateTsTypeMap: {
   },
   LogicalExpression(node: UnionFlowType<TSType, "LogicalExpression">, path) {
     const referenceType = operator.operatorType(node.operator, node, path);
-    return referenceType;
+    return referenceType?.typeAnnotation || referenceType;
   },
-  OptionalCallExpression(node: UnionFlowType<TSType, "OptionalCallExpression">, path) {
-    const { callee } = node
-    return t.isOptionalMemberExpression(callee) ? t.tsUnionType([generateTsTypeMap[callee.type]?.(callee, path), t.tsVoidKeyword()]) : t.tsVoidKeyword()
+  OptionalCallExpression(
+    node: UnionFlowType<TSType, "OptionalCallExpression">,
+    path
+  ) {
+    const { callee } = node;
+    return t.isOptionalMemberExpression(callee)
+      ? t.tsUnionType([
+          generateTsTypeMap[callee.type]?.(callee, path),
+          t.tsVoidKeyword(),
+        ])
+      : t.tsVoidKeyword();
   },
   Identifier(node: UnionFlowType<TSType, "Identifier">, path, option) {
-    const tsyTypes = []
-    const isBaseIdentifier = baseTsAstMaps.find(baseTSType => baseTSType.startsWith(node.name))
+    const tsyTypes = [];
+    const isBaseIdentifier = baseTsAstMaps.find((baseTSType) =>
+      baseTSType.startsWith(node.name)
+    );
     if (isBaseIdentifier) {
-      tsyTypes.push(generateTsTypeMap[isBaseIdentifier]())
+      tsyTypes.push(generateTsTypeMap[isBaseIdentifier]());
     }
-    const typeAnnotation =  exportTsAst(node, node, path)
+    const typeAnnotation = exportTsAst(node, node, path);
     if (typeAnnotation) {
-      return typeAnnotation
+      return typeAnnotation;
     }
-    handleTsAst.Identifier(path.scope.getBinding(node.name), tsyTypes, option)
+    handleTsAst.Identifier(path.scope.getBinding(node.name), tsyTypes, option);
     if (tsyTypes.length) {
       if (tsyTypes.length === 1) {
-        const tsType = tsyTypes[0]
-        return t.isTSTypeAnnotation(tsType) ? tsType.typeAnnotation : tsType
+        const tsType = tsyTypes[0];
+        return t.isTSTypeAnnotation(tsType) ? tsType.typeAnnotation : tsType;
       } else {
-        return t.tsUnionType(tsyTypes)
+        return t.tsUnionType(tsyTypes);
       }
     }
 
-    return t.tsUnknownKeyword()
+    return t.tsUnknownKeyword();
   },
   /**
-   * 
+   *
    * @param node.arguments是函数里的参数 callee是调用对象
-   * @param path 
-   * @returns 
+   * @param path
+   * @returns
    */
   CallExpression(node: UnionFlowType<TSType, "CallExpression">, path) {
-    const { callee } = node; 
+    const { callee, arguments: callExpressionArguments } = node;
     if ((node as CallExpression).typeParameters) {
-      return unionUtils.UnionType((node as CallExpression).typeParameters.params)
+      return unionUtils.UnionType(
+        (node as CallExpression).typeParameters.params
+      );
     }
 
-    let buildASTRequire = t.tsUnknownKeyword()
+    let buildASTRequire = t.tsUnknownKeyword();
     try {
       buildASTRequire = generateTsTypeMaps[callee.type]?.(callee, path);
       if (!buildASTRequire && callee.propert) {
-        buildASTRequire = esRender.renderESGeneric(callee.property)
+        buildASTRequire = esRender.renderESGeneric(callee.property);
       }
-    } catch(err) {
-      buildASTRequire = esRender.renderESGeneric(callee.property)
+    } catch (err) {
+      buildASTRequire = esRender.renderESGeneric(callee.property);
     }
 
-    return buildASTRequire || t.tsUnknownKeyword()
+    return (callee.property?.name === 'resolve' || callee.property?.name === 'reject') && callExpressionArguments
+      ? unionUtils.UnionType(callExpressionArguments?.map(exp => generateTsTypeMap[exp.type]?.(exp,path)))
+      : buildASTRequire || t.tsUnknownKeyword();
   },
   AssignmentExpression(node: UnionFlowType<TSType, "CallExpression">, path) {
-    return generateTsTypeMap[node.right?.type]?.(node?.right, path)
+    return generateTsTypeMap[node.right?.type]?.(node?.right, path);
   },
   /**
    * @description as 断言
    */
   TSAsExpression(node: TSType) {
-    return node.typeAnnotation
+    return node.typeAnnotation;
   },
-  ConditionalExpression(node: UnionFlowType<Node, 'ConditionalExpression'>, path) {
-    const { consequent, alternate } = node
+  ConditionalExpression(
+    node: UnionFlowType<Node, "ConditionalExpression">,
+    path
+  ) {
+    const { consequent, alternate } = node;
 
-    return unionUtils.IntegrateTSTypeToUnionType([generateTsTypeMap[consequent.type]?.(consequent, path), generateTsTypeMap[alternate.type]?.(alternate, path)])
+    return unionUtils.IntegrateTSTypeToUnionType([
+      generateTsTypeMap[consequent.type]?.(consequent, path),
+      generateTsTypeMap[alternate.type]?.(alternate, path),
+    ]);
   },
-  UnaryExpression(node: UnionFlowType<Node, 'UnaryExpression'>, path) {
-    const { operator } = node
+  UnaryExpression(node: UnionFlowType<Node, "UnaryExpression">, path) {
+    const { operator } = node;
 
-    if (operator === 'void') {
-      return t.tsVoidKeyword()
+    if (operator === "void") {
+      return t.tsVoidKeyword();
     }
-  }
+  },
 };
 
 // 联合类型
@@ -516,7 +569,7 @@ const baseTsAstMaps: string[] = [
   "StringTypeAnnotation",
   "BooleanTypeAnnotation",
   "UnionTypeAnnotation",
-  'undefined'
+  "undefined",
 ];
 
 // 对既有TSAst数据进行操作

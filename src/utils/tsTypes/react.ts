@@ -66,9 +66,20 @@ export default {
             node.extends?.[0]?.expression || {},
             path
           );
-          if (exportTsAstTs && propsTSType?.body?.body) {
+          if (exportTsAstTs && stateTSType?.body?.body) {
             stateTSType.body.body = [
-              ...stateTSType?.body?.body,
+              ...stateTSType?.body?.body.map((tsType) => {
+                const exportTsAstTs = exportTsAst(
+                  tsType?.typeAnnotation?.typeAnnotation?.typeName,
+                  tsType?.typeAnnotation?.typeAnnotation?.typeName,
+                  path
+                );
+
+                if (exportTsAstTs) {
+                  tsType.typeAnnotation.typeAnnotation = exportTsAstTs;
+                }
+                return tsType;
+              }),
               ...exportTsAstTs?.body?.body,
             ];
           }
@@ -84,6 +95,7 @@ export default {
       stateTSType,
     };
   },
+  // 获取Props和State的interface AST
   getClassPropsAndState(path) {
     const classDeclarationPath = this.getClassParentPath(path);
 
@@ -95,7 +107,7 @@ export default {
       let stateTSType;
       if (
         (props && t.isIdentifier(props.typeName)) ||
-        (state && t.isIdentifier(state))
+        (state && t.isIdentifier(state.typeName))
       ) {
         const interfaceRes = this.getGlobalTSInterface(path, props, state);
         propsTSType = interfaceRes.propsTSType;
@@ -107,6 +119,7 @@ export default {
       };
     }
   },
+  // 获取x.y.z格式的keys集合 -> [x, y, z]
   getPropsAndStateMemberExpression(node, isReactComponent = true /* 解析 */) {
     let { object, property } = node;
     const keys = [];
@@ -171,20 +184,25 @@ export default {
             ? anotherProps.members
             : [];
 
-          tsType = properties?.find((pro) => pro.key?.name === key) || tsType;
-          anotherProps = tsType?.typeAnnotation?.typeAnnotation;
+          tsType = properties?.find((pro) => pro.key?.name === key);
+          anotherProps =
+            tsType?.typeAnnotation?.typeAnnotation || t.tsNeverKeyword();
         }
       }
       if (tsType) {
         if (t.isTSInterfaceDeclaration(anotherProps)) {
-          const { body: { body } } = anotherProps;
+          const {
+            body: { body },
+          } = anotherProps;
 
-          return t.tsTypeLiteral(body)
+          return t.tsTypeLiteral(body);
         }
         return t.isTSType(anotherProps)
           ? anotherProps
           : generateTsTypeMaps[anotherProps.type]?.(anotherProps, path) ||
               anotherProps;
+      } else {
+        return anotherProps;
       }
     }
   },
@@ -195,7 +213,7 @@ export default {
     if (!t.isMemberExpression(node)) return;
     const { property, object, keys } = this.getPropsAndStateMemberExpression(
       node,
-      path
+      true
     );
     const { props, state } = globalThis.reactPropsAndState || {};
     if (
@@ -270,9 +288,13 @@ export default {
         scopeNode &&
         t.isVariableDeclarator(scopeNode.path.node) &&
         t.isMemberExpression(scopeNode.path.node.init) &&
-        scopeNode.path.node.init.property.name === "props"
+        this.reactMarkFields.includes(scopeNode.path.node.init.property.name)
       ) {
-        this.getDeepPropertyTSType(props, keys, path);
+        return this.getDeepPropertyTSType(
+          scopeNode.path.node.init.property.name === "props" ? props : state,
+          keys,
+          path
+        );
       }
     }
   },

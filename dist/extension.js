@@ -16,8 +16,8 @@ module.exports = require("vscode");
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const vscode = __webpack_require__(1);
 const utils_1 = __webpack_require__(3);
-const config_1 = __webpack_require__(208);
-globalThis.loopPathLimit = 15;
+const config_1 = __webpack_require__(209);
+globalThis.loopPathLimit = 5;
 class CoreTypeAst {
     constructor() {
         this.EventListenersMap = [];
@@ -68,8 +68,8 @@ const vscode = __webpack_require__(1);
 const parse_1 = __webpack_require__(4);
 const traverse_1 = __webpack_require__(6);
 const visitors_1 = __webpack_require__(184);
-const bullet_1 = __webpack_require__(203);
-const initGlobalThis_1 = __webpack_require__(209);
+const bullet_1 = __webpack_require__(204);
+const initGlobalThis_1 = __webpack_require__(210);
 exports["default"] = {
     dedupArray(elements, mark) {
         const dedupArray = elements.filter((ele, index) => {
@@ -45648,16 +45648,16 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.traverseFunctionDeclartion = exports.getReturnBulletTypeAnnotation = exports.FunctionDeclaration = void 0;
 const generateTsAstMaps_1 = __webpack_require__(186);
 const handleTsAst_1 = __webpack_require__(187);
-const bullet_1 = __webpack_require__(203);
+const bullet_1 = __webpack_require__(204);
 const generate = __webpack_require__(117);
 const vscode = __webpack_require__(1);
 const t = __webpack_require__(10);
-const generic_1 = __webpack_require__(206);
-const unknown_1 = __webpack_require__(207);
-const union_1 = __webpack_require__(193);
-const config_1 = __webpack_require__(208);
+const generic_1 = __webpack_require__(207);
+const unknown_1 = __webpack_require__(208);
+const union_1 = __webpack_require__(192);
+const config_1 = __webpack_require__(209);
 const exportTsAst_1 = __webpack_require__(197);
-const react_1 = __webpack_require__(210);
+const react_1 = __webpack_require__(203);
 function typePromiseOrAnnotation(tsTypeAnotation, async) {
     if (tsTypeAnotation.isJSXElement) {
         return async ? ": Promise<React.Element>" : ": React.Element";
@@ -45702,8 +45702,8 @@ function typePromiseOrAnnotation(tsTypeAnotation, async) {
         }
     }
     return async
-        ? t.tsTypeAnnotation(t.tsTypeReference(t.identifier("Promise"), t.tsTypeParameterInstantiation(Array.isArray(annotation) ? annotation : [annotation])))
-        : t.tsTypeAnnotation(t.isTSType(annotation) ? annotation : t.tsTypeReference(annotation.id));
+        ? t.tsTypeAnnotation(t.tsTypeReference(t.identifier("Promise"), t.tsTypeParameterInstantiation(Array.isArray(annotation) ? annotation.map(annotation => annotation?.typeAnnotation || annotation) : [annotation?.typeAnnotation || annotation])))
+        : t.tsTypeAnnotation(t.isTSType(annotation?.typeAnnotation || annotation) ? (annotation?.typeAnnotation || annotation) : t.tsTypeReference(annotation.id));
 }
 exports.FunctionDeclaration = "FunctionDeclaration|ArrowFunctionExpression|ClassMethod|ObjectMethod";
 function getReturnBulletTypeAnnotation(returnAstNode, path, async) {
@@ -45711,6 +45711,13 @@ function getReturnBulletTypeAnnotation(returnAstNode, path, async) {
         try {
             globalThis.returnStatement = returnAstNode;
             const { argument } = returnAstNode || {};
+            if (!argument) {
+                return {
+                    content: {
+                        typeAnnotation: t.tsVoidKeyword()
+                    }
+                };
+            }
             if (returnAstNode.bulletTypeAnnotation) {
                 return {
                     content: returnAstNode.bulletTypeAnnotation,
@@ -45742,7 +45749,7 @@ function getReturnBulletTypeAnnotation(returnAstNode, path, async) {
                 });
                 const typeReference = {
                     content: {
-                        typeAnnotation: returnTypeReference,
+                        typeAnnotation: t.isTSType(returnTypeReference?.typeAnnotation) ? returnTypeReference?.typeAnnotation : returnTypeReference,
                         isMaxSizeee: globalThis.isMaxSizeee === bindScopePath?.identifier?.name,
                     },
                     type: returnTypeReference?.typeAnnotation?.type || "unknown",
@@ -45833,12 +45840,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.baseTsAstMaps = exports.curdGenerateTsAstMaps = exports.generateTsTypeMaps = void 0;
 const handleTsAst_1 = __webpack_require__(187);
 const FunctionDeclaration_1 = __webpack_require__(185);
-const operator_1 = __webpack_require__(192);
+const operator_1 = __webpack_require__(193);
 const t = __webpack_require__(10);
 const es_1 = __webpack_require__(195);
-const union_1 = __webpack_require__(193);
+const union_1 = __webpack_require__(192);
 const exportTsAst_1 = __webpack_require__(197);
-const react_1 = __webpack_require__(210);
+const react_1 = __webpack_require__(203);
 //  js类型与Flow ast映射关系 只针对该类型生成TSType
 const generateTsTypeMap = {
     undefined: t.tsVoidKeyword,
@@ -45883,7 +45890,7 @@ const generateTsTypeMap = {
         }
     },
     TSPropertySignature(tsType) {
-        const { typeAnnotation: { typeAnnotation } } = tsType;
+        const { typeAnnotation: { typeAnnotation }, } = tsType;
         return typeAnnotation;
     },
     ParamterDeclaration: (params) => {
@@ -45954,20 +45961,24 @@ const generateTsTypeMap = {
         else {
             const { properties } = node;
             if (!properties.length) {
-                return t.tsTypeReference(t.identifier('Record'), t.tsTypeParameterInstantiation([t.tsStringKeyword(), t.tsAnyKeyword()]));
+                return t.tsTypeReference(t.identifier("Record"), t.tsTypeParameterInstantiation([
+                    t.tsStringKeyword(),
+                    t.tsAnyKeyword(),
+                ]));
             }
             let spreadElementProperties = [];
-            const spreadElement = properties?.filter(pro => t.isSpreadElement(pro));
-            const propertiesElement = properties?.filter(pro => !t.isSpreadElement(pro));
+            const spreadElement = properties?.filter((pro) => t.isSpreadElement(pro));
+            const propertiesElement = properties?.filter((pro) => !t.isSpreadElement(pro));
             if (spreadElement.length) {
-                spreadElementProperties = spreadElement.map(spread => {
+                spreadElementProperties = spreadElement.map((spread) => {
                     return generateTsTypeMap[spread?.type]?.(spread, path);
                 });
                 globalThis.isSpreadElement = false;
             }
             return t.tsTypeLiteral(propertiesElement.map((propert) => {
                 let keyName = (propert.key?.name ||
-                    propert.key) || (propert.argument)?.name;
+                    propert.key) ||
+                    propert.argument?.name;
                 if (propert.key || propert.argument) {
                     if (propert.computed) {
                         const scopeIdnetifier = path.scope.getAllBindings()?.[keyName];
@@ -45978,14 +45989,18 @@ const generateTsTypeMap = {
                             }
                         }
                     }
-                    const tsType = t.tsPropertySignature(t.stringLiteral(keyName), t.tsTypeAnnotation(generateTsTypeMap[propert.value?.type || propert?.type]?.(propert?.value || propert, path)));
+                    const tsType = t.tsPropertySignature(t.stringLiteral(keyName), t.tsTypeAnnotation(generateTsTypeMap[propert.value?.type ||
+                        propert?.type]?.(propert?.value || propert, path)));
                     tsType.optional =
-                        option?.optional || t.isOptionalMemberExpression(propert.value);
+                        option?.optional ||
+                            t.isOptionalMemberExpression(propert.value);
                     return tsType;
                 }
-            }).concat(spreadElementProperties?.map(property => {
-                return property.members;
-            }).flat(Infinity)));
+            }).concat(spreadElementProperties
+                ?.map((property) => {
+                return property.members || [];
+            })
+                .flat(Infinity)));
         }
     },
     SpreadElement(node, path) {
@@ -46001,11 +46016,16 @@ const generateTsTypeMap = {
                 return typeAnnotation;
             }
         }
+        else {
+            return generateTsTypeMap[argument?.type]?.(argument, path);
+        }
     },
     ArrowFunctionExpression: (node, path) => {
         const { params = [], body } = node;
         const paramsType = generateTsTypeMap.TsTypeParameterDeclaration(params);
-        return t.tsFunctionType(paramsType, params.map((param) => t.isRestElement(param) ? t.restElement(t.identifier(param.argument?.name)) : t.identifier(param.name)), t.tsTypeAnnotation((t.isIdentifier(body)
+        return t.tsFunctionType(paramsType, params.map((param) => t.isRestElement(param)
+            ? t.restElement(t.identifier(param.argument?.name))
+            : t.identifier(param.name)), t.tsTypeAnnotation((t.isIdentifier(body)
             ? handleTsAst_1.default.Identifier(path.scope.getBinding(body.name), [])
             : exports.generateTsTypeMaps[body.type]?.(body, path)) || t.tsUnknownKeyword()));
     },
@@ -46018,7 +46038,7 @@ const generateTsTypeMap = {
     },
     // 参数类型
     TsTypeParameterDeclaration: (params) => {
-        // t.isRestElement(param) ? t.restElement(param.argument.name, null, null, param.argument?.typeAnnotation?.typeAnnotation) 
+        // t.isRestElement(param) ? t.restElement(param.argument.name, null, null, param.argument?.typeAnnotation?.typeAnnotation)
         return t.tsTypeParameterDeclaration(params.map((param) => {
             const type = param?.typeAnnotation?.typeAnnotation;
             return t.tsTypeParameter(type || t.tsUnknownKeyword(), null, t.isRestElement(param) ? param.argument?.name : param.name);
@@ -46027,7 +46047,7 @@ const generateTsTypeMap = {
     // 对象属性
     MemberExpression: (node, path, option) => {
         const { property, object } = node;
-        const { parent } = path;
+        const { parent } = path || {};
         const tsType = react_1.default.getReactMemberExpression(node, path);
         if (tsType) {
             return tsType;
@@ -46044,10 +46064,11 @@ const generateTsTypeMap = {
                 return tsType;
             }
             else {
-                const tsType = es_1.esRender.renderESGeneric(property);
+                const tsType = es_1.esRender.renderESGeneric(property, path);
                 if (tsType)
                     return tsType;
             }
+            return t.tsUnknownKeyword();
         }
         else if (property.type === "PrivateName") {
         }
@@ -46055,7 +46076,8 @@ const generateTsTypeMap = {
             // expression 表达式
         }
         if (generateTsTypeMap[object.type]) {
-            if ((t.isIdentifier(object) && option?.isReturnStatement) || !option?.isReturnStatement) {
+            if ((t.isIdentifier(object) && option?.isReturnStatement) ||
+                !option?.isReturnStatement) {
                 const typeAnnotation = generateTsTypeMap[object.type]?.(object, path, option);
                 if (typeAnnotation)
                     return typeAnnotation;
@@ -46063,25 +46085,9 @@ const generateTsTypeMap = {
         }
     },
     OptionalMemberExpression: (node, path, option) => {
-        const { property, object } = node;
-        const { parent } = path;
-        if (t.isIdentifier(property)) {
-            if (parent.right) {
-                const { name } = property;
-                const tsType = t.tsPropertySignature(t.stringLiteral(name), t.tsTypeAnnotation(generateTsTypeMap[parent?.right?.type]?.(parent.right, path, option)));
-                tsType.optional = option.optional;
-                return tsType;
-            }
-            else {
-                const tsType = es_1.esRender.renderESGeneric(property);
-                if (tsType)
-                    return tsType;
-            }
-        }
-        else if (property.type === "PrivateName") {
-        }
-        else {
-            // expression 表达式
+        const tsType = generateTsTypeMap.MemberExpression(node, path, option);
+        if (tsType) {
+            return tsType;
         }
         if (t.isIdentifier(object)) {
             const identifierPath = path.scope.getBinding(object.name)?.identifier;
@@ -46091,7 +46097,8 @@ const generateTsTypeMap = {
             }
         }
         if (generateTsTypeMap[object.type]) {
-            if ((t.isIdentifier(object) && option?.isReturnStatement) || !option?.isReturnStatement) {
+            if ((t.isIdentifier(object) && option?.isReturnStatement) ||
+                !option?.isReturnStatement) {
                 const typeAnnotation = generateTsTypeMap[object.type]?.(object, path, option);
                 if (typeAnnotation)
                     return typeAnnotation;
@@ -46125,15 +46132,20 @@ const generateTsTypeMap = {
     },
     LogicalExpression(node, path) {
         const referenceType = operator_1.default.operatorType(node.operator, node, path);
-        return referenceType;
+        return referenceType?.typeAnnotation || referenceType;
     },
     OptionalCallExpression(node, path) {
         const { callee } = node;
-        return t.isOptionalMemberExpression(callee) ? t.tsUnionType([generateTsTypeMap[callee.type]?.(callee, path), t.tsVoidKeyword()]) : t.tsVoidKeyword();
+        return t.isOptionalMemberExpression(callee)
+            ? t.tsUnionType([
+                generateTsTypeMap[callee.type]?.(callee, path),
+                t.tsVoidKeyword(),
+            ])
+            : t.tsVoidKeyword();
     },
     Identifier(node, path, option) {
         const tsyTypes = [];
-        const isBaseIdentifier = baseTsAstMaps.find(baseTSType => baseTSType.startsWith(node.name));
+        const isBaseIdentifier = baseTsAstMaps.find((baseTSType) => baseTSType.startsWith(node.name));
         if (isBaseIdentifier) {
             tsyTypes.push(generateTsTypeMap[isBaseIdentifier]());
         }
@@ -46160,7 +46172,7 @@ const generateTsTypeMap = {
      * @returns
      */
     CallExpression(node, path) {
-        const { callee } = node;
+        const { callee, arguments: callExpressionArguments } = node;
         if (node.typeParameters) {
             return union_1.unionUtils.UnionType(node.typeParameters.params);
         }
@@ -46174,7 +46186,9 @@ const generateTsTypeMap = {
         catch (err) {
             buildASTRequire = es_1.esRender.renderESGeneric(callee.property);
         }
-        return buildASTRequire || t.tsUnknownKeyword();
+        return (callee.property?.name === 'resolve' || callee.property?.name === 'reject') && callExpressionArguments
+            ? union_1.unionUtils.UnionType(callExpressionArguments?.map(exp => generateTsTypeMap[exp.type]?.(exp, path)))
+            : buildASTRequire || t.tsUnknownKeyword();
     },
     AssignmentExpression(node, path) {
         return generateTsTypeMap[node.right?.type]?.(node?.right, path);
@@ -46187,14 +46201,17 @@ const generateTsTypeMap = {
     },
     ConditionalExpression(node, path) {
         const { consequent, alternate } = node;
-        return union_1.unionUtils.IntegrateTSTypeToUnionType([generateTsTypeMap[consequent.type]?.(consequent, path), generateTsTypeMap[alternate.type]?.(alternate, path)]);
+        return union_1.unionUtils.IntegrateTSTypeToUnionType([
+            generateTsTypeMap[consequent.type]?.(consequent, path),
+            generateTsTypeMap[alternate.type]?.(alternate, path),
+        ]);
     },
     UnaryExpression(node, path) {
         const { operator } = node;
-        if (operator === 'void') {
+        if (operator === "void") {
             return t.tsVoidKeyword();
         }
-    }
+    },
 };
 // 联合类型
 const baseTsAstMaps = [
@@ -46206,7 +46223,7 @@ const baseTsAstMaps = [
     "StringTypeAnnotation",
     "BooleanTypeAnnotation",
     "UnionTypeAnnotation",
-    'undefined'
+    "undefined",
 ];
 exports.baseTsAstMaps = baseTsAstMaps;
 // 对既有TSAst数据进行操作
@@ -46239,7 +46256,7 @@ const interface_1 = __webpack_require__(189);
 const t = __webpack_require__(10);
 const loopPath_1 = __webpack_require__(190);
 const getReturnStatement_1 = __webpack_require__(191);
-const union_1 = __webpack_require__(193);
+const union_1 = __webpack_require__(192);
 // 当tsAstTypes收集到所有类型后, 开始做预后联合，将重复属性拼凑为联合类型
 const postmathClassMethodTsAst = (tsAstTypes) => {
     const redundancFlowMap = new Map();
@@ -46509,6 +46526,10 @@ exports["default"] = {
                 if (returnStatement = handleTsAst_1.default.ReturnStatement(TryStatement.block, path)) {
                     returnBullet = returnBullet.concat(returnStatement);
                 }
+                const handlerStatement = handleTsAst_1.default.ReturnStatement(TryStatement?.handler?.body, path);
+                if (handlerStatement) {
+                    returnBullet = returnBullet.concat(handlerStatement);
+                }
             });
         }
         return returnBullet;
@@ -46560,39 +46581,6 @@ exports["default"] = {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const generateTsAstMaps_1 = __webpack_require__(186);
-const t = __webpack_require__(10);
-const union_1 = __webpack_require__(193);
-const string_1 = __webpack_require__(194);
-exports["default"] = {
-    numberOperator: ['+', '-', '*', '**', '/', '%', '&', '|', '>>', '>>>', '<<', '^'],
-    booleanOperator: ["==", "===", "!=", "!==", "in", "instanceof", ">", "<", ">=", "<=", ",>", "!", "!!"],
-    expressionOperator: ['||', '&&', '??'],
-    operatorType(operator, node, path) {
-        if (this.numberOperator.includes(operator)) {
-            if (operator === '+') {
-                const { left, right } = node;
-                return string_1.default.uppcase(left?.type).startsWith('Str') || string_1.default.uppcase(left?.type).startsWith('Temp') || string_1.default.uppcase(right?.type).startsWith('Temp') || string_1.default.uppcase(right?.type).startsWith('Str') ? 'StringLiteral' : 'NumericLiteral';
-            }
-            return 'NumericLiteral';
-        }
-        else if (this.booleanOperator.includes(operator)) {
-            return 'BooleanLiteral';
-        }
-        else if (this.expressionOperator.includes(operator)) {
-            return t.tsUnionType([union_1.unionUtils.GetTSType(generateTsAstMaps_1.generateTsTypeMaps[node.left.type]?.(node.left, path) || t.tsUnknownKeyword()), union_1.unionUtils.GetTSType(generateTsAstMaps_1.generateTsTypeMaps[node.right.type]?.(node.right, path) || t.tsUnknownKeyword())]);
-        }
-    }
-};
-
-
-/***/ }),
-/* 193 */
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.unionUtils = void 0;
 const t = __webpack_require__(10);
 exports.unionUtils = {
@@ -46611,7 +46599,7 @@ exports.unionUtils = {
             }
             else {
                 return {
-                    typeAnnotation: t.tsUnionType(tsyTypes.flatMap(params => t.isTSTypeAnnotation(params.typeAnnotation) ? params.typeAnnotation.typeAnnotation : (t.isTSUnionType(params.typeAnnotation) ? params.typeAnnotation.types : params.typeAnnotation))),
+                    typeAnnotation: t.tsUnionType(tsyTypes.flatMap(params => t.isTSTypeAnnotation(params.typeAnnotation) ? params.typeAnnotation.typeAnnotation : (t.isTSUnionType(params.typeAnnotation) ? params.typeAnnotation.types : params.typeAnnotation || params))),
                     isMaxSizeee: tsyTypes.find(t => t.isMaxSizeee)
                 };
             }
@@ -46633,6 +46621,42 @@ exports.unionUtils = {
             }
         }).flat(Infinity);
         return t.tsUnionType(untionTypes);
+    }
+};
+
+
+/***/ }),
+/* 193 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const generateTsAstMaps_1 = __webpack_require__(186);
+const t = __webpack_require__(10);
+const union_1 = __webpack_require__(192);
+const string_1 = __webpack_require__(194);
+exports["default"] = {
+    numberOperator: ['+', '-', '*', '**', '/', '%', '&', '|', '>>', '>>>', '<<', '^'],
+    booleanOperator: ["==", "===", "!=", "!==", "in", "instanceof", ">", "<", ">=", "<=", ",>", "!", "!!"],
+    expressionOperator: ['||', '&&', '??'],
+    operatorType(operator, node, path) {
+        if (this.numberOperator.includes(operator)) {
+            if (operator === '+') {
+                const { left, right } = node;
+                return string_1.default.uppcase(left?.type).startsWith('Str') || string_1.default.uppcase(left?.type).startsWith('Temp') || string_1.default.uppcase(right?.type).startsWith('Temp') || string_1.default.uppcase(right?.type).startsWith('Str') ? 'StringLiteral' : 'NumericLiteral';
+            }
+            return 'NumericLiteral';
+        }
+        else if (this.booleanOperator.includes(operator)) {
+            return 'BooleanLiteral';
+        }
+        else if (this.expressionOperator.includes(operator)) {
+            if (t.isIdentifier(node.left) && node.left?.name === globalThis.returnStatement?.argument?.name) {
+                return generateTsAstMaps_1.generateTsTypeMaps[node.right.type]?.(node.right, path) || t.tsUnknownKeyword();
+            }
+            return union_1.unionUtils.UnionType([union_1.unionUtils.GetTSType(generateTsAstMaps_1.generateTsTypeMaps[node.left.type]?.(node.left, path) || t.tsUnknownKeyword()), union_1.unionUtils.GetTSType(generateTsAstMaps_1.generateTsTypeMaps[node.right.type]?.(node.right, path) || t.tsUnknownKeyword())]);
+        }
     }
 };
 
@@ -46674,7 +46698,7 @@ exports.esRender = void 0;
 const lib_es2015_1 = __webpack_require__(196);
 const template_1 = __webpack_require__(166);
 exports.esRender = {
-    renderESGeneric(property) {
+    renderESGeneric(property, path) {
         if (lib_es2015_1.EsTSUtils[property.name]) {
             const buildASTRequire = (0, template_1.default)(`
           type Generic = ${lib_es2015_1.EsTSUtils[property.name]()}
@@ -46729,7 +46753,7 @@ exports.EsTSUtils = {
      * Adds all the elements of an array into a string, separated by the specified separator string.
      * @param separator A string used to separate one element of the array from the next in the resulting string. If omitted, the array elements are separated with a comma.
      */
-    join: (TSType = 'string') => `${TSType};`,
+    join: () => `string`,
     /**
      * Reverses the elements in an array in place.
      * This method mutates the array and returns a reference to the same array.
@@ -46880,7 +46904,7 @@ exports.EsTSUtils = {
     * @param reviver A function that transforms the results. This function is called for each member of the object.
     * If a member contains nested objects, the nested objects are transformed before the parent object is.
     */
-    parse: () => `any`,
+    parse: () => `Record<string, any>`,
     includes: () => 'boolean',
     stringify: () => 'string',
     isArray: () => 'boolean',
@@ -46894,12 +46918,26 @@ exports.EsTSUtils = {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getMemoryExportTypeAST = void 0;
 const t = __webpack_require__(10);
 const fs_1 = __webpack_require__(198);
 const ExportDeclaration_1 = __webpack_require__(201);
 const __1 = __webpack_require__(3);
 const exportTsTypesMap_1 = __webpack_require__(202);
-const react_1 = __webpack_require__(210);
+const react_1 = __webpack_require__(203);
+const getMemoryExportTypeAST = ({ identifierName, property, path }, isNative = false) => {
+    const exportIndentiferNode = globalThis.exportsIndentifer[identifierName];
+    if (exportIndentiferNode) {
+        const typeAnnotation = exportTsTypesMap_1.default[exportIndentiferNode.type]?.(exportIndentiferNode, property);
+        if (typeAnnotation) {
+            return typeAnnotation;
+        }
+        else {
+            return isNative ? exportIndentiferNode : react_1.default.getDeepPropertyTSType(exportIndentiferNode, [], path);
+        }
+    }
+};
+exports.getMemoryExportTypeAST = getMemoryExportTypeAST;
 function default_1(object, property, path) {
     if (t.isIdentifier(object)) {
         const identifierPath = path.scope.getBinding(object.name)?.identifier;
@@ -46912,12 +46950,13 @@ function default_1(object, property, path) {
                 const importPath = referencePath?.path.parent?.source.value;
                 if (importPath) {
                     const content = fs_1.default.getFsContent(fs_1.default.getResolvePath(importPath));
-                    const exportIndentiferNode = globalThis.exportsIndentifer[identifierName];
-                    if (exportIndentiferNode) {
-                        const typeAnnotation = exportTsTypesMap_1.default[exportIndentiferNode.type]?.(exportIndentiferNode, property);
-                        if (typeAnnotation) {
-                            return typeAnnotation;
-                        }
+                    const tsAST = (0, exports.getMemoryExportTypeAST)({
+                        identifierName,
+                        property,
+                        path
+                    });
+                    if (tsAST) {
+                        return tsAST;
                     }
                     else {
                         if (content) {
@@ -46925,12 +46964,13 @@ function default_1(object, property, path) {
                             // @ts-ignore
                             (0, ExportDeclaration_1.default)(identifierName), content);
                         }
-                        const exportIndentiferNode = globalThis.exportsIndentifer[identifierName];
-                        if (exportIndentiferNode) {
-                            const typeAnnotation = exportTsTypesMap_1.default[exportIndentiferNode.type]?.(exportIndentiferNode, property);
-                            if (typeAnnotation) {
-                                return typeAnnotation;
-                            }
+                        const tsAST = (0, exports.getMemoryExportTypeAST)({
+                            identifierName,
+                            property,
+                            path
+                        });
+                        if (tsAST) {
+                            return tsAST;
                         }
                     }
                     return typeAnnotation;
@@ -46938,13 +46978,13 @@ function default_1(object, property, path) {
                 else {
                     const { propsTSType } = react_1.default.getGlobalTSInterface(path, {
                         typeName: {
-                            name: identifierName
-                        }
+                            name: identifierName,
+                        },
                     });
                     if (propsTSType) {
                         const { keys } = react_1.default.getPropsAndStateMemberExpression({
                             object,
-                            property
+                            property,
                         }, false);
                         return react_1.default.getDeepPropertyTSType(propsTSType, keys, path);
                     }
@@ -46952,32 +46992,28 @@ function default_1(object, property, path) {
             }
         }
         const referencePath = path.scope.getAllBindings()[object.name];
-        if (referencePath.kind === "module") {
+        if (referencePath?.kind === "module") {
             const importPath = referencePath.path.parent?.source.value;
             const content = fs_1.default.getFsContent(fs_1.default.getResolvePath(importPath));
-            const exportIndentiferNode = globalThis.exportsIndentifer[object.name];
-            if (exportIndentiferNode) {
-                const typeAnnotation = exportTsTypesMap_1.default[exportIndentiferNode.type]?.(exportIndentiferNode, property, path);
-                if (typeAnnotation) {
-                    return typeAnnotation;
-                }
-                else {
-                    return exportIndentiferNode;
-                }
+            const tsAST = (0, exports.getMemoryExportTypeAST)({
+                identifierName: object.name,
+                property,
+                path
+            }, true);
+            if (tsAST) {
+                return tsAST;
             }
             else if (content) {
                 __1.default.transformAST(
                 // @ts-ignore
                 (0, ExportDeclaration_1.default)(object.name), content);
-                const exportIndentiferNode = globalThis.exportsIndentifer[object.name];
-                if (exportIndentiferNode) {
-                    const typeAnnotation = exportTsTypesMap_1.default[exportIndentiferNode.type]?.(exportIndentiferNode, property, path);
-                    if (typeAnnotation) {
-                        return typeAnnotation;
-                    }
-                    else {
-                        return exportIndentiferNode;
-                    }
+                const tsAST = (0, exports.getMemoryExportTypeAST)({
+                    identifierName: object.name,
+                    property,
+                    path
+                }, true);
+                if (tsAST) {
+                    return tsAST;
                 }
             }
         }
@@ -46997,14 +47033,29 @@ const path = __webpack_require__(199);
 const fs = __webpack_require__(200);
 const vscode = __webpack_require__(1);
 exports["default"] = {
+    getSrcDirname(pathName) {
+        while (pathName && !pathName.endsWith("src")) {
+            pathName = path.dirname(pathName);
+        }
+        return pathName;
+    },
     getResolvePath(pathName) {
-        const currentDirname = vscode.window.activeTextEditor.document.uri.fsPath;
-        return path.resolve(path.dirname(currentDirname), pathName + '.ts');
+        let currentDirname = vscode.window.activeTextEditor.document.uri.fsPath;
+        if (pathName.startsWith("@")) {
+            currentDirname = path.resolve(this.getSrcDirname(currentDirname), "_tsdevried");
+            pathName = pathName.slice(pathName.startsWith("@/") ? 2 : 1);
+        }
+        const transformPath = path.resolve(path.dirname(currentDirname), pathName);
+        return this.getPathisDir(transformPath) ? path.resolve(transformPath, 'index.ts') : transformPath + '.ts';
+    },
+    getPathisDir(pathName) {
+        const stat = fs.lstatSync(pathName);
+        return stat.isDirectory();
     },
     getFsContent(filePath) {
-        const content = fs.readFileSync(filePath, { encoding: 'utf-8' });
+        const content = fs.readFileSync(filePath, { encoding: "utf-8" });
         return content;
-    }
+    },
 };
 
 
@@ -47064,7 +47115,7 @@ exports["default"] = ExportDeclarationVisitor;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const t = __webpack_require__(10);
-const union_1 = __webpack_require__(193);
+const union_1 = __webpack_require__(192);
 const generateTsAstMaps_1 = __webpack_require__(186);
 exports["default"] = {
     TSInterfaceDeclaration(node, property) {
@@ -47089,10 +47140,249 @@ exports["default"] = {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+/* eslint-disable */
+// @ts-nocheck
+const t = __webpack_require__(10);
+const exportTsAst_1 = __webpack_require__(197);
+const generateTsAstMaps_1 = __webpack_require__(186);
+exports["default"] = {
+    reactMarkFields: ["props", "state"],
+    getClassParentPath(path) {
+        let parentPath = path;
+        while (parentPath) {
+            if (parentPath?.node?.type === "ClassDeclaration") {
+                return parentPath;
+            }
+            parentPath = parentPath.parentPath;
+        }
+    },
+    getProgramPath(path) {
+        let parentPath = path;
+        while (parentPath) {
+            if (parentPath?.node?.type === "Program") {
+                return parentPath;
+            }
+            parentPath = parentPath.parentPath;
+        }
+    },
+    getGlobalTSInterface(path, props, state) {
+        let propsTSType;
+        let stateTSType;
+        this.getProgramPath(path).traverse({
+            "TSInterfaceDeclaration|TSTypeAliasDeclaration": (path) => {
+                const { node } = path;
+                const { id } = node;
+                if (id?.name === props.typeName?.name) {
+                    propsTSType = node;
+                    const exportTsAstTs = (0, exportTsAst_1.default)(node.extends?.[0]?.expression || {}, node.extends?.[0]?.expression || {}, path);
+                    if (exportTsAstTs && propsTSType?.body?.body) {
+                        propsTSType.body.body = [
+                            ...propsTSType?.body?.body.map((tsType) => {
+                                const exportTsAstTs = (0, exportTsAst_1.default)(tsType?.typeAnnotation?.typeAnnotation?.typeName, tsType?.typeAnnotation?.typeAnnotation?.typeName, path);
+                                if (exportTsAstTs) {
+                                    tsType.typeAnnotation.typeAnnotation = exportTsAstTs;
+                                }
+                                return tsType;
+                            }),
+                            ...exportTsAstTs?.body?.body,
+                        ];
+                    }
+                    path.skip();
+                }
+                else if (id?.name === state?.typeName?.name) {
+                    stateTSType = node;
+                    const exportTsAstTs = (0, exportTsAst_1.default)(node.extends?.[0]?.expression || {}, node.extends?.[0]?.expression || {}, path);
+                    if (exportTsAstTs && stateTSType?.body?.body) {
+                        stateTSType.body.body = [
+                            ...stateTSType?.body?.body.map((tsType) => {
+                                const exportTsAstTs = (0, exportTsAst_1.default)(tsType?.typeAnnotation?.typeAnnotation?.typeName, tsType?.typeAnnotation?.typeAnnotation?.typeName, path);
+                                if (exportTsAstTs) {
+                                    tsType.typeAnnotation.typeAnnotation = exportTsAstTs;
+                                }
+                                return tsType;
+                            }),
+                            ...exportTsAstTs?.body?.body,
+                        ];
+                    }
+                    path.skip();
+                }
+                else {
+                    path.skip();
+                }
+            },
+        });
+        return {
+            propsTSType,
+            stateTSType,
+        };
+    },
+    // 获取Props和State的interface AST
+    getClassPropsAndState(path) {
+        const classDeclarationPath = this.getClassParentPath(path);
+        if (classDeclarationPath) {
+            const { superTypeParameters } = classDeclarationPath.node;
+            const [props, state] = superTypeParameters?.params || [];
+            let propsTSType;
+            let stateTSType;
+            if ((props && t.isIdentifier(props.typeName)) ||
+                (state && t.isIdentifier(state.typeName))) {
+                const interfaceRes = this.getGlobalTSInterface(path, props, state);
+                propsTSType = interfaceRes.propsTSType;
+                stateTSType = interfaceRes.stateTSType;
+            }
+            return {
+                props: propsTSType,
+                state: stateTSType,
+            };
+        }
+    },
+    // 获取x.y.z格式的keys集合 -> [x, y, z]
+    getPropsAndStateMemberExpression(node, isReactComponent = true /* 解析 */) {
+        let { object, property } = node;
+        const keys = [];
+        while (t.isMemberExpression(object)) {
+            keys.unshift(property.name);
+            property = object.property;
+            object = object.object;
+        }
+        if (t.isIdentifier(property)) {
+            if (!this.reactMarkFields.includes(property.name)) {
+                keys.unshift(property.name);
+            }
+        }
+        if (isReactComponent) {
+            if (t.isIdentifier(object)) {
+                if (!this.reactMarkFields.includes(object.name)) {
+                    keys.unshift(object.name);
+                }
+            }
+        }
+        return {
+            object: object,
+            property,
+            keys,
+        };
+    },
+    getTSPropertySignatureTypeAnnotation(typeAnnotation, keys) {
+        let { members = [] } = typeAnnotation;
+        let keyName = keys.shift();
+        let tsType;
+        if (keyName) {
+            while (keyName) {
+                tsType = members?.find((member) => member?.key?.name === keyName);
+                members = tsType?.typeAnnotation?.typeAnnotation?.members || [];
+                keyName = keys.shift();
+            }
+            if (tsType) {
+                return tsType.typeAnnotation.typeAnnotation;
+            }
+        }
+        else {
+            return typeAnnotation;
+        }
+    },
+    getDeepPropertyTSType(props, keys, path) {
+        if (props) {
+            let key, anotherProps = props, tsType;
+            if (globalThis.isSpreadElement) {
+                tsType = anotherProps;
+                anotherProps = tsType;
+            }
+            else {
+                while ((key = keys.shift())) {
+                    const properties = t.isTSInterfaceDeclaration(anotherProps)
+                        ? anotherProps.body?.body || []
+                        : t.isTSTypeLiteral(anotherProps)
+                            ? anotherProps.members
+                            : [];
+                    tsType = properties?.find((pro) => pro.key?.name === key);
+                    anotherProps =
+                        tsType?.typeAnnotation?.typeAnnotation || t.tsNeverKeyword();
+                }
+            }
+            if (tsType) {
+                if (t.isTSInterfaceDeclaration(anotherProps)) {
+                    const { body: { body }, } = anotherProps;
+                    return t.tsTypeLiteral(body);
+                }
+                return t.isTSType(anotherProps)
+                    ? anotherProps
+                    : generateTsAstMaps_1.generateTsTypeMaps[anotherProps.type]?.(anotherProps, path) ||
+                        anotherProps;
+            }
+            else {
+                return anotherProps;
+            }
+        }
+    },
+    getReactMemberExpression(node, path) {
+        if (!t.isMemberExpression(node))
+            return;
+        const { property, object, keys } = this.getPropsAndStateMemberExpression(node, true);
+        const { props, state } = globalThis.reactPropsAndState || {};
+        if (object.property?.name === "props" ||
+            property?.name === "props" ||
+            object.property?.name === "state" ||
+            property?.name === "state") {
+            if (props) {
+                const { body: { body = [] }, } = props;
+                const tsType = body.find((tsTypeParam) => tsTypeParam?.key?.name ===
+                    (property?.name === "props"
+                        ? globalThis?.returnStatement?.argument?.name
+                        : property.name));
+                const objectTsType = body.find((tsTypeParam) => globalThis?.returnStatement?.argument?.properties?.some((argu) => argu?.key?.name === tsTypeParam?.key?.name));
+                if (tsType) {
+                    return tsType.typeAnnotation.typeAnnotation;
+                }
+                if (objectTsType) {
+                    return objectTsType.typeAnnotation.typeAnnotation;
+                }
+            }
+            if (state) {
+                const { body: { body = [] }, } = state;
+                const key = keys.shift();
+                const tsType = body.find((tsTypeParam) => tsTypeParam?.key?.name ===
+                    (key ||
+                        (property?.name === "state"
+                            ? globalThis?.returnStatement?.argument?.name
+                            : property.name)));
+                const objectTsType = body.find((tsTypeParam) => globalThis?.returnStatement?.argument?.properties?.some((argu) => argu?.key?.name === tsTypeParam?.key?.name));
+                const arrayTsType = body.find((tsTypeParam) => globalThis?.arrayExpressionElement?.name === tsTypeParam?.key?.name);
+                if (tsType) {
+                    return this.getTSPropertySignatureTypeAnnotation(tsType.typeAnnotation.typeAnnotation, keys);
+                }
+                if (objectTsType) {
+                    return objectTsType.typeAnnotation.typeAnnotation;
+                }
+                if (arrayTsType) {
+                    return arrayTsType.typeAnnotation.typeAnnotation;
+                }
+            }
+        }
+        else {
+            const scopeNode = path.scope.getBinding(object?.name);
+            if (scopeNode &&
+                t.isVariableDeclarator(scopeNode.path.node) &&
+                t.isMemberExpression(scopeNode.path.node.init) &&
+                this.reactMarkFields.includes(scopeNode.path.node.init.property.name)) {
+                return this.getDeepPropertyTSType(scopeNode.path.node.init.property.name === "props" ? props : state, keys, path);
+            }
+        }
+    },
+};
+
+
+/***/ }),
+/* 204 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 const vscode = __webpack_require__(1);
-const format_1 = __webpack_require__(204);
+const format_1 = __webpack_require__(205);
 const string_1 = __webpack_require__(194);
-const author_1 = __webpack_require__(205);
+const author_1 = __webpack_require__(206);
 class Bullet {
     constructor() {
         this.lineCount = 0;
@@ -47160,7 +47450,7 @@ exports["default"] = new Bullet();
 
 
 /***/ }),
-/* 204 */
+/* 205 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -47189,23 +47479,17 @@ exports["default"] = new Format();
 
 
 /***/ }),
-/* 205 */
+/* 206 */
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports["default"] = `
------------------------
-作者信息
------------------------
-"Plugin's Author is: Cai"
-"Contact phone: github.com"
-`;
+exports["default"] = ``;
 
 
 /***/ }),
-/* 206 */
+/* 207 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
@@ -47220,14 +47504,14 @@ exports["default"] = {
 
 
 /***/ }),
-/* 207 */
+/* 208 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const generic_1 = __webpack_require__(206);
-const bullet_1 = __webpack_require__(203);
+const generic_1 = __webpack_require__(207);
+const bullet_1 = __webpack_require__(204);
 const vscode = __webpack_require__(1);
 exports["default"] = {
     getUnkonwnTSType(path, async, unknownMark = '?') {
@@ -47245,7 +47529,7 @@ exports["default"] = {
 
 
 /***/ }),
-/* 208 */
+/* 209 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
@@ -47291,7 +47575,7 @@ exports["default"] = {
 
 
 /***/ }),
-/* 209 */
+/* 210 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
@@ -47303,233 +47587,6 @@ function initGlobalThis() {
     loopPath_1.default.loopPathMap.clear();
 }
 exports["default"] = initGlobalThis;
-
-
-/***/ }),
-/* 210 */
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-/* eslint-disable */
-// @ts-nocheck
-const t = __webpack_require__(10);
-const exportTsAst_1 = __webpack_require__(197);
-const generateTsAstMaps_1 = __webpack_require__(186);
-exports["default"] = {
-    reactMarkFields: ["props", "state"],
-    getClassParentPath(path) {
-        let parentPath = path;
-        while (parentPath) {
-            if (parentPath?.node?.type === "ClassDeclaration") {
-                return parentPath;
-            }
-            parentPath = parentPath.parentPath;
-        }
-    },
-    getProgramPath(path) {
-        let parentPath = path;
-        while (parentPath) {
-            if (parentPath?.node?.type === "Program") {
-                return parentPath;
-            }
-            parentPath = parentPath.parentPath;
-        }
-    },
-    getGlobalTSInterface(path, props, state) {
-        let propsTSType;
-        let stateTSType;
-        this.getProgramPath(path).traverse({
-            "TSInterfaceDeclaration|TSTypeAliasDeclaration": (path) => {
-                const { node } = path;
-                const { id } = node;
-                if (id?.name === props.typeName?.name) {
-                    propsTSType = node;
-                    const exportTsAstTs = (0, exportTsAst_1.default)(node.extends?.[0]?.expression || {}, node.extends?.[0]?.expression || {}, path);
-                    if (exportTsAstTs && propsTSType?.body?.body) {
-                        propsTSType.body.body = [
-                            ...propsTSType?.body?.body.map((tsType) => {
-                                const exportTsAstTs = (0, exportTsAst_1.default)(tsType?.typeAnnotation?.typeAnnotation?.typeName, tsType?.typeAnnotation?.typeAnnotation?.typeName, path);
-                                if (exportTsAstTs) {
-                                    tsType.typeAnnotation.typeAnnotation = exportTsAstTs;
-                                }
-                                return tsType;
-                            }),
-                            ...exportTsAstTs?.body?.body,
-                        ];
-                    }
-                    path.skip();
-                }
-                else if (id?.name === state?.typeName?.name) {
-                    stateTSType = node;
-                    const exportTsAstTs = (0, exportTsAst_1.default)(node.extends?.[0]?.expression || {}, node.extends?.[0]?.expression || {}, path);
-                    if (exportTsAstTs && propsTSType?.body?.body) {
-                        stateTSType.body.body = [
-                            ...stateTSType?.body?.body,
-                            ...exportTsAstTs?.body?.body,
-                        ];
-                    }
-                    path.skip();
-                }
-                else {
-                    path.skip();
-                }
-            },
-        });
-        return {
-            propsTSType,
-            stateTSType,
-        };
-    },
-    getClassPropsAndState(path) {
-        const classDeclarationPath = this.getClassParentPath(path);
-        if (classDeclarationPath) {
-            const { superTypeParameters } = classDeclarationPath.node;
-            const [props, state] = superTypeParameters?.params || [];
-            let propsTSType;
-            let stateTSType;
-            if ((props && t.isIdentifier(props.typeName)) ||
-                (state && t.isIdentifier(state))) {
-                const interfaceRes = this.getGlobalTSInterface(path, props, state);
-                propsTSType = interfaceRes.propsTSType;
-                stateTSType = interfaceRes.stateTSType;
-            }
-            return {
-                props: propsTSType,
-                state: stateTSType,
-            };
-        }
-    },
-    getPropsAndStateMemberExpression(node, isReactComponent = true /* 解析 */) {
-        let { object, property } = node;
-        const keys = [];
-        while (t.isMemberExpression(object)) {
-            keys.unshift(property.name);
-            property = object.property;
-            object = object.object;
-        }
-        if (t.isIdentifier(property)) {
-            if (!this.reactMarkFields.includes(property.name)) {
-                keys.unshift(property.name);
-            }
-        }
-        if (isReactComponent) {
-            if (t.isIdentifier(object)) {
-                if (!this.reactMarkFields.includes(object.name)) {
-                    keys.unshift(object.name);
-                }
-            }
-        }
-        return {
-            object: object,
-            property,
-            keys,
-        };
-    },
-    getTSPropertySignatureTypeAnnotation(typeAnnotation, keys) {
-        let { members = [] } = typeAnnotation;
-        let keyName = keys.shift();
-        let tsType;
-        if (keyName) {
-            while (keyName) {
-                tsType = members?.find((member) => member?.key?.name === keyName);
-                members = tsType?.typeAnnotation?.typeAnnotation?.members || [];
-                keyName = keys.shift();
-            }
-            if (tsType) {
-                return tsType.typeAnnotation.typeAnnotation;
-            }
-        }
-        else {
-            return typeAnnotation;
-        }
-    },
-    getDeepPropertyTSType(props, keys, path) {
-        if (props) {
-            let key, anotherProps = props, tsType;
-            if (globalThis.isSpreadElement) {
-                tsType = anotherProps;
-                anotherProps = tsType;
-            }
-            else {
-                while ((key = keys.shift())) {
-                    const properties = t.isTSInterfaceDeclaration(anotherProps)
-                        ? anotherProps.body?.body || []
-                        : t.isTSTypeLiteral(anotherProps)
-                            ? anotherProps.members
-                            : [];
-                    tsType = properties?.find((pro) => pro.key?.name === key) || tsType;
-                    anotherProps = tsType?.typeAnnotation?.typeAnnotation;
-                }
-            }
-            if (tsType) {
-                if (t.isTSInterfaceDeclaration(anotherProps)) {
-                    const { body: { body } } = anotherProps;
-                    return t.tsTypeLiteral(body);
-                }
-                return t.isTSType(anotherProps)
-                    ? anotherProps
-                    : generateTsAstMaps_1.generateTsTypeMaps[anotherProps.type]?.(anotherProps, path) ||
-                        anotherProps;
-            }
-        }
-    },
-    getReactMemberExpression(node, path) {
-        if (!t.isMemberExpression(node))
-            return;
-        const { property, object, keys } = this.getPropsAndStateMemberExpression(node, path);
-        const { props, state } = globalThis.reactPropsAndState || {};
-        if (object.property?.name === "props" ||
-            property?.name === "props" ||
-            object.property?.name === "state" ||
-            property?.name === "state") {
-            if (props) {
-                const { body: { body = [] }, } = props;
-                const tsType = body.find((tsTypeParam) => tsTypeParam?.key?.name ===
-                    (property?.name === "props"
-                        ? globalThis?.returnStatement?.argument?.name
-                        : property.name));
-                const objectTsType = body.find((tsTypeParam) => globalThis?.returnStatement?.argument?.properties?.some((argu) => argu?.key?.name === tsTypeParam?.key?.name));
-                if (tsType) {
-                    return tsType.typeAnnotation.typeAnnotation;
-                }
-                if (objectTsType) {
-                    return objectTsType.typeAnnotation.typeAnnotation;
-                }
-            }
-            if (state) {
-                const { body: { body = [] }, } = state;
-                const key = keys.shift();
-                const tsType = body.find((tsTypeParam) => tsTypeParam?.key?.name ===
-                    (key ||
-                        (property?.name === "state"
-                            ? globalThis?.returnStatement?.argument?.name
-                            : property.name)));
-                const objectTsType = body.find((tsTypeParam) => globalThis?.returnStatement?.argument?.properties?.some((argu) => argu?.key?.name === tsTypeParam?.key?.name));
-                const arrayTsType = body.find((tsTypeParam) => globalThis?.arrayExpressionElement?.name === tsTypeParam?.key?.name);
-                if (tsType) {
-                    return this.getTSPropertySignatureTypeAnnotation(tsType.typeAnnotation.typeAnnotation, keys);
-                }
-                if (objectTsType) {
-                    return objectTsType.typeAnnotation.typeAnnotation;
-                }
-                if (arrayTsType) {
-                    return arrayTsType.typeAnnotation.typeAnnotation;
-                }
-            }
-        }
-        else {
-            const scopeNode = path.scope.getBinding(object?.name);
-            if (scopeNode &&
-                t.isVariableDeclarator(scopeNode.path.node) &&
-                t.isMemberExpression(scopeNode.path.node.init) &&
-                scopeNode.path.node.init.property.name === "props") {
-                this.getDeepPropertyTSType(props, keys, path);
-            }
-        }
-    },
-};
 
 
 /***/ })

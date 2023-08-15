@@ -4,7 +4,7 @@ import * as t from '@babel/types';
 import handleTsAst from '../../utils/tsTypes/handleTsAst';
 
 export const esRender = {
-  renderESGeneric(property) {
+  renderESGeneric(property, path) {
     if (EsTSUtils[property.name]) {
       const buildASTRequire = template(`
           type Generic = ${EsTSUtils[property.name]()}

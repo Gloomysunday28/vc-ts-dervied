@@ -15,7 +15,7 @@ export const unionUtils = {
         return tsyTypes[0];
       } else {
         return {
-          typeAnnotation: t.tsUnionType(tsyTypes.flatMap(params => t.isTSTypeAnnotation(params.typeAnnotation) ? params.typeAnnotation.typeAnnotation : (t.isTSUnionType(params.typeAnnotation) ? params.typeAnnotation.types : params.typeAnnotation))),
+          typeAnnotation: t.tsUnionType(tsyTypes.flatMap(params => t.isTSTypeAnnotation(params.typeAnnotation) ? params.typeAnnotation.typeAnnotation : (t.isTSUnionType(params.typeAnnotation) ? params.typeAnnotation.types : params.typeAnnotation || params))),
           isMaxSizeee: tsyTypes.find(t => t.isMaxSizeee)
         };
       }

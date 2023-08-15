@@ -1,4 +1,7 @@
-export const GenericT = 'unknown'
+import handleTsAst from "../utils/tsTypes/handleTsAst";
+import * as t from '@babel/types';
+
+export const GenericT = 'unknown';
 export const EsTSUtils = {
   /**
     * Gets or sets the length of the array. This is a number one higher than the highest index in the array.
@@ -32,7 +35,7 @@ export const EsTSUtils = {
    * Adds all the elements of an array into a string, separated by the specified separator string.
    * @param separator A string used to separate one element of the array from the next in the resulting string. If omitted, the array elements are separated with a comma.
    */
-  join: (TSType = 'string') => `${TSType};`,
+  join: () => `string`,
   /**
    * Reverses the elements in an array in place.
    * This method mutates the array and returns a reference to the same array.
@@ -184,7 +187,7 @@ export const EsTSUtils = {
   * @param reviver A function that transforms the results. This function is called for each member of the object.
   * If a member contains nested objects, the nested objects are transformed before the parent object is.
   */
-  parse: () => `any`,
+  parse: () => `Record<string, any>`,
   includes: () => 'boolean',
   stringify: () => 'string',
   isArray: () => 'boolean',

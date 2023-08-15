@@ -3,7 +3,26 @@ import fs from "../../core/fs";
 import ExportDeclarationVisitor from "../../core/visitors/ExportDeclaration";
 import utils from "..";
 import ExportTsTypesMap from "./exportTsTypesMap";
-import react from './react';
+import react from "./react";
+
+export const getMemoryExportTypeAST = ({
+  identifierName,
+  property,
+  path
+}, isNative = false) => {
+  const exportIndentiferNode = globalThis.exportsIndentifer[identifierName];
+  if (exportIndentiferNode) {
+    const typeAnnotation = ExportTsTypesMap[exportIndentiferNode.type]?.(
+      exportIndentiferNode,
+      property
+    );
+    if (typeAnnotation) {
+      return typeAnnotation;
+    } else {
+      return isNative ? exportIndentiferNode : react.getDeepPropertyTSType(exportIndentiferNode, [], path);
+    }
+  }
+};
 
 export default function (object, property, path) {
   if (t.isIdentifier(object)) {
@@ -18,16 +37,13 @@ export default function (object, property, path) {
         const importPath = referencePath?.path.parent?.source.value;
         if (importPath) {
           const content = fs.getFsContent(fs.getResolvePath(importPath));
-          const exportIndentiferNode =
-            globalThis.exportsIndentifer[identifierName];
-          if (exportIndentiferNode) {
-            const typeAnnotation = ExportTsTypesMap[exportIndentiferNode.type]?.(
-              exportIndentiferNode,
-              property
-            );
-            if (typeAnnotation) {
-              return typeAnnotation;
-            }
+          const tsAST = getMemoryExportTypeAST({
+            identifierName,
+            property,
+            path
+          });
+          if (tsAST) {
+            return tsAST;
           } else {
             if (content) {
               utils.transformAST(
@@ -36,31 +52,33 @@ export default function (object, property, path) {
                 content
               );
             }
-  
-            const exportIndentiferNode =
-              globalThis.exportsIndentifer[identifierName];
-            if (exportIndentiferNode) {
-              const typeAnnotation = ExportTsTypesMap[
-                exportIndentiferNode.type
-              ]?.(exportIndentiferNode, property);
-              if (typeAnnotation) {
-                return typeAnnotation;
-              }
+
+            const tsAST = getMemoryExportTypeAST({
+              identifierName,
+              property,
+              path
+            });
+
+            if (tsAST) {
+              return tsAST;
             }
           }
           return typeAnnotation;
         } else {
           const { propsTSType } = react.getGlobalTSInterface(path, {
             typeName: {
-              name: identifierName
-            }
+              name: identifierName,
+            },
           });
-          
+
           if (propsTSType) {
-            const { keys } = react.getPropsAndStateMemberExpression({
-              object,
-              property
-            }, false);
+            const { keys } = react.getPropsAndStateMemberExpression(
+              {
+                object,
+                property,
+              },
+              false
+            );
             return react.getDeepPropertyTSType(propsTSType, keys, path);
           }
         }
@@ -68,23 +86,18 @@ export default function (object, property, path) {
     }
 
     const referencePath = path.scope.getAllBindings()[object.name];
-    if (referencePath.kind === "module") {
+    if (referencePath?.kind === "module") {
       const importPath = referencePath.path.parent?.source.value;
       const content = fs.getFsContent(fs.getResolvePath(importPath));
 
-      const exportIndentiferNode =
-      globalThis.exportsIndentifer[object.name];
-      if (exportIndentiferNode) {
-        const typeAnnotation = ExportTsTypesMap[exportIndentiferNode.type]?.(
-          exportIndentiferNode,
-          property,
-          path
-        );
-        if (typeAnnotation) {
-          return typeAnnotation;
-        } else {
-          return exportIndentiferNode;
-        }
+      const tsAST = getMemoryExportTypeAST({
+        identifierName: object.name,
+        property,
+        path
+      }, true);
+
+      if (tsAST) {
+        return tsAST;
       } else if (content) {
         utils.transformAST(
           // @ts-ignore
@@ -92,18 +105,13 @@ export default function (object, property, path) {
           content
         );
 
-        const exportIndentiferNode = globalThis.exportsIndentifer[object.name];
-        if (exportIndentiferNode) {
-          const typeAnnotation = ExportTsTypesMap[exportIndentiferNode.type]?.(
-            exportIndentiferNode,
-            property,
-            path
-          );
-          if (typeAnnotation) {
-            return typeAnnotation;
-          } else {
-            return exportIndentiferNode;
-          }
+        const tsAST = getMemoryExportTypeAST({
+          identifierName: object.name,
+          property,
+          path
+        }, true);
+        if (tsAST) {
+          return tsAST;
         }
       }
     }

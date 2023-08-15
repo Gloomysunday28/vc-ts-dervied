@@ -74,11 +74,11 @@ function typePromiseOrAnnotation(
         t.tsTypeReference(
           t.identifier("Promise"),
           t.tsTypeParameterInstantiation(
-            Array.isArray(annotation) ? annotation : [annotation]
+            Array.isArray(annotation) ? annotation.map(annotation => annotation?.typeAnnotation || annotation) : [annotation?.typeAnnotation || annotation]
           )
         )
       )
-    : t.tsTypeAnnotation(t.isTSType(annotation) ? annotation as t.TSType : t.tsTypeReference(annotation.id));
+    : t.tsTypeAnnotation(t.isTSType(annotation?.typeAnnotation || annotation) ? (annotation?.typeAnnotation || annotation) as t.TSType : t.tsTypeReference(annotation.id));
 }
 
 export const FunctionDeclaration =
@@ -89,6 +89,14 @@ export function getReturnBulletTypeAnnotation(returnAstNode, path, async) {
     try {
       globalThis.returnStatement = returnAstNode;
       const { argument } = returnAstNode || {};
+
+      if (!argument) {
+        return {
+          content: {
+            typeAnnotation: t.tsVoidKeyword()
+          }
+        };
+      }
 
       if ((returnAstNode as any).bulletTypeAnnotation) {
         return {
@@ -111,7 +119,7 @@ export function getReturnBulletTypeAnnotation(returnAstNode, path, async) {
       }
 
       if (t.isIdentifier(argument)) {
-        const typeAnnotation =  exportTsAst(argument, argument, path);
+        const typeAnnotation = exportTsAst(argument, argument, path);
         if (typeAnnotation) {
           return {
             content: {
@@ -131,7 +139,7 @@ export function getReturnBulletTypeAnnotation(returnAstNode, path, async) {
 
         const typeReference = {
           content: {
-            typeAnnotation: returnTypeReference,
+            typeAnnotation: t.isTSType(returnTypeReference?.typeAnnotation) ? returnTypeReference?.typeAnnotation : returnTypeReference,
             isMaxSizeee:
               globalThis.isMaxSizeee === bindScopePath?.identifier?.name,
           },

@@ -3,7 +3,7 @@ import utils from "../utils";
 import config from './config';
 import type { Disposable } from 'vscode';
 
-globalThis.loopPathLimit = 15;
+globalThis.loopPathLimit = 5;
 export default class CoreTypeAst {
   EventListenersMap: Disposable[] = [];
   fileExt = ['ts', 'tsx', 'vue', 'js'];
