@@ -462,10 +462,8 @@ const generateTsTypeMap: {
       return t.tsTupleType(
         (elements as TSType[])?.map((ele) => {
           globalThis.arrayExpressionElement = ele;
-          if (t.isIdentifier(ele)) {
-            const bindScopePath =
-              path.scope.bindings[(ele as unknown as Identifier).name];
-            return handleTsAst.Identifier(bindScopePath, []);
+          if (t.isIdentifier(ele) || t.isSpreadElement(ele)) {
+             return generateTsTypeMap.Identifier(ele.argument || ele, path)
           }
 
           return generateTsTypeMap[ele.type](ele, path);
@@ -513,7 +511,7 @@ const generateTsTypeMap: {
         const tsType = tsyTypes[0];
         return t.isTSTypeAnnotation(tsType) ? tsType.typeAnnotation : tsType;
       } else {
-        return t.tsUnionType(tsyTypes);
+        return unionUtils.UnionType(tsyTypes, false)
       }
     }
 
@@ -568,11 +566,7 @@ const generateTsTypeMap: {
     ]);
   },
   UnaryExpression(node: UnionFlowType<Node, "UnaryExpression">, path) {
-    const { operator } = node;
-
-    if (operator === "void") {
-      return t.tsVoidKeyword();
-    }
+    return generateTsTypeMap[operator.operatorType(node.operator, node, path)]?.();
   },
 };
 

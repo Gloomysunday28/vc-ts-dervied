@@ -141,6 +141,19 @@ const handleTsAstMaps = {
       );
     }
   },
+  ObjectPattern(node: UnionFlowType<Node, 'ObjectPattern'>, tsTypes, poath) {
+    const { typeAnnotation: objectPatternTS } = node
+
+    const currentElement = globalThis.arrayExpressionElement
+    if (currentElement && objectPatternTS ) {
+      // @ts-ignore
+      const { typeAnnotation } = objectPatternTS
+      if (typeAnnotation && t.isTSTypeLiteral(typeAnnotation)) {
+        const tsType = typeAnnotation.members?.find(m => m.key.name === (currentElement?.argument?.name || currentElement?.name)) || t.tsUnknownKeyword()
+        tsTypes.push(tsType?.typeAnnotation ? tsType.typeAnnotation?.typeAnnotation : tsType)
+      }
+    }
+  }
 };
 
 export default handleTsAstMaps;

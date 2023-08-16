@@ -32,6 +32,9 @@ function typePromiseOrAnnotation(
   }
   let annotation;
   if (Array.isArray(tsTypeAnotation)) {
+    if (tsTypeAnotation.some(ts => ts.isJSXElement)) {
+      return async ? ": Promise<React.Element>" : ": React.Element";
+    }
     annotation = tsTypeAnotation.map((anotation) => {
       if (anotation.isMaxSizeee) {
         if (anotation.type === "TSUnionType") {
@@ -89,19 +92,19 @@ export function getReturnBulletTypeAnnotation(returnAstNode, path, async) {
     try {
       globalThis.returnStatement = returnAstNode;
       const { argument } = returnAstNode || {};
+      
+      if ((returnAstNode as any).bulletTypeAnnotation) {
+        return {
+          content: (returnAstNode as any).bulletTypeAnnotation,
+          type: (returnAstNode as any).bulletTypeAnnotation.type,
+        };
+      }
 
       if (!argument) {
         return {
           content: {
             typeAnnotation: t.tsVoidKeyword()
           }
-        };
-      }
-
-      if ((returnAstNode as any).bulletTypeAnnotation) {
-        return {
-          content: (returnAstNode as any).bulletTypeAnnotation,
-          type: (returnAstNode as any).bulletTypeAnnotation.type,
         };
       }
 

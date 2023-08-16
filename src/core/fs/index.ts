@@ -23,8 +23,13 @@ export default {
     return this.getPathisDir(transformPath) ? path.resolve(transformPath, 'index.ts') : transformPath + '.ts';
   },
   getPathisDir(pathName: string) {
-    const stat = fs.lstatSync(pathName);
-    return stat.isDirectory();
+    try {
+      const stat = fs.lstatSync(pathName);
+      return stat.isDirectory();
+    } catch(err) {
+    }
+
+    return false;
   },
   getFsContent(filePath: string) {
     const content = fs.readFileSync(filePath, { encoding: "utf-8" });

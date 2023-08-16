@@ -235,7 +235,8 @@ export default {
       object.property?.name === "props" ||
       property?.name === "props" ||
       object.property?.name === "state" ||
-      property?.name === "state"
+      property?.name === "state" ||
+      object?.name === 'props'
     ) {
       if (props) {
         const {
