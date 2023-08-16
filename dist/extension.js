@@ -46064,6 +46064,21 @@ const generateTsTypeMap = {
                 return tsType;
             }
             else {
+                // const { propsTSType } = react.getGlobalTSInterface(path, {
+                //   typeName: {
+                //     name: property.name,
+                //   },
+                // });
+                // if (propsTSType) {
+                //   const { keys } = react.getPropsAndStateMemberExpression(
+                //     {
+                //       object,
+                //       property,
+                //     },
+                //     false
+                //   );
+                //   return react.getDeepPropertyTSType(propsTSType, keys, path);
+                // }
                 const tsType = es_1.esRender.renderESGeneric(property, path);
                 if (tsType)
                     return tsType;
@@ -47281,6 +47296,13 @@ exports["default"] = {
             return typeAnnotation;
         }
     },
+    getTSMemberBody(tsReference) {
+        return t.isTSInterfaceDeclaration(tsReference)
+            ? tsReference.body?.body || []
+            : t.isTSTypeLiteral(tsReference)
+                ? tsReference.members
+                : [];
+    },
     getDeepPropertyTSType(props, keys, path) {
         if (props) {
             let key, anotherProps = props, tsType;
@@ -47290,11 +47312,21 @@ exports["default"] = {
             }
             else {
                 while ((key = keys.shift())) {
-                    const properties = t.isTSInterfaceDeclaration(anotherProps)
-                        ? anotherProps.body?.body || []
-                        : t.isTSTypeLiteral(anotherProps)
-                            ? anotherProps.members
-                            : [];
+                    let properties = [];
+                    if (t.isTSUnionType(anotherProps)) {
+                        const reference = anotherProps.types.find(p => t.isTSTypeReference(p));
+                        if (reference) {
+                            const r = this.getGlobalTSInterface(path, reference);
+                            properties = this.getTSMemberBody(r.propsTSType);
+                        }
+                    }
+                    else if (t.isTSTypeReference(anotherProps)) {
+                        const r = this.getGlobalTSInterface(path, anotherProps);
+                        properties = this.getTSMemberBody(r.propsTSType);
+                    }
+                    else {
+                        properties = this.getTSMemberBody(anotherProps);
+                    }
                     tsType = properties?.find((pro) => pro.key?.name === key);
                     anotherProps =
                         tsType?.typeAnnotation?.typeAnnotation || t.tsNeverKeyword();
@@ -47316,7 +47348,7 @@ exports["default"] = {
         }
     },
     getReactMemberExpression(node, path) {
-        if (!t.isMemberExpression(node))
+        if (!t.isMemberExpression(node) && !t.isOptionalMemberExpression(node))
             return;
         const { property, object, keys } = this.getPropsAndStateMemberExpression(node, true);
         const { props, state } = globalThis.reactPropsAndState || {};

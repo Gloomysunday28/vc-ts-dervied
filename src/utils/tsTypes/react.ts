@@ -168,6 +168,13 @@ export default {
       return typeAnnotation;
     }
   },
+  getTSMemberBody(tsReference) {
+    return t.isTSInterfaceDeclaration(tsReference)
+    ? tsReference.body?.body || []
+    : t.isTSTypeLiteral(tsReference)
+    ? tsReference.members
+    : []
+  },
   getDeepPropertyTSType(props, keys, path) {
     if (props) {
       let key,
@@ -178,12 +185,20 @@ export default {
         anotherProps = tsType;
       } else {
         while ((key = keys.shift())) {
-          const properties = t.isTSInterfaceDeclaration(anotherProps)
-            ? anotherProps.body?.body || []
-            : t.isTSTypeLiteral(anotherProps)
-            ? anotherProps.members
-            : [];
-
+          let properties = []
+          if (t.isTSUnionType(anotherProps)) {
+            const reference = anotherProps.types.find(p => t.isTSTypeReference(p))
+            if (reference) {
+              const r = this.getGlobalTSInterface(path, reference)
+              properties = this.getTSMemberBody(r.propsTSType)
+            }
+          } else if (t.isTSTypeReference(anotherProps)) {
+            const r = this.getGlobalTSInterface(path, anotherProps)
+            properties = this.getTSMemberBody(r.propsTSType)
+          } else {
+            properties = this.getTSMemberBody(anotherProps)
+          }
+       
           tsType = properties?.find((pro) => pro.key?.name === key);
           anotherProps =
             tsType?.typeAnnotation?.typeAnnotation || t.tsNeverKeyword();
@@ -210,7 +225,7 @@ export default {
     node: UnionFlowType<t.Node, "MemberExpression">,
     path
   ) {
-    if (!t.isMemberExpression(node)) return;
+    if (!t.isMemberExpression(node) && !t.isOptionalMemberExpression(node)) return;
     const { property, object, keys } = this.getPropsAndStateMemberExpression(
       node,
       true

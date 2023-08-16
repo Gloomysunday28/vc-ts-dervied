@@ -370,6 +370,23 @@ const generateTsTypeMap: {
         tsType.optional = option.optional;
         return tsType;
       } else {
+        // const { propsTSType } = react.getGlobalTSInterface(path, {
+        //   typeName: {
+        //     name: property.name,
+        //   },
+        // });
+
+        // if (propsTSType) {
+        //   const { keys } = react.getPropsAndStateMemberExpression(
+        //     {
+        //       object,
+        //       property,
+        //     },
+        //     false
+        //   );
+        //   return react.getDeepPropertyTSType(propsTSType, keys, path);
+        // }
+      
         const tsType = esRender.renderESGeneric(property, path);
         if (tsType) return tsType;
       }
