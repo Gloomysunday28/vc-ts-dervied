@@ -4,6 +4,7 @@ import ExportDeclarationVisitor from "../../core/visitors/ExportDeclaration";
 import utils from "..";
 import ExportTsTypesMap from "./exportTsTypesMap";
 import react from "./react";
+import { generateTsTypeMaps } from "./generateTsAstMaps";
 
 export const getMemoryExportTypeAST = ({
   identifierName,
@@ -21,6 +22,25 @@ export const getMemoryExportTypeAST = ({
     } else {
       return isNative ? exportIndentiferNode : react.getDeepPropertyTSType(exportIndentiferNode, [], path);
     }
+  }
+};
+
+export const traverseProgram = (path, identifierName, object, property) => {
+  const { propsTSType } = react.getGlobalTSInterface(path, {
+    typeName: {
+      name: identifierName,
+    },
+  });
+
+  if (propsTSType) {
+    const { keys } = react.getPropsAndStateMemberExpression(
+      {
+        object,
+        property,
+      },
+      false
+    );
+    return react.getDeepPropertyTSType(propsTSType, keys, path);
   }
 };
 
@@ -65,22 +85,7 @@ export default function (object, property, path) {
           }
           return typeAnnotation;
         } else {
-          const { propsTSType } = react.getGlobalTSInterface(path, {
-            typeName: {
-              name: identifierName,
-            },
-          });
-
-          if (propsTSType) {
-            const { keys } = react.getPropsAndStateMemberExpression(
-              {
-                object,
-                property,
-              },
-              false
-            );
-            return react.getDeepPropertyTSType(propsTSType, keys, path);
-          }
+          return traverseProgram(path, identifierName, object, property);
         }
       }
     }
@@ -114,6 +119,8 @@ export default function (object, property, path) {
           return tsAST;
         }
       }
+    } else {
+      return generateTsTypeMaps[referencePath?.path?.node?.type]?.(referencePath?.path?.node, referencePath?.path);
     }
   }
 }

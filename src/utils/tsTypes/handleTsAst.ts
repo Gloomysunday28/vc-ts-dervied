@@ -116,7 +116,7 @@ export default {
     if (loopPath(bindScopePath.identifier)) {
       return handlePath(bindScopePath, tsAstTypes, options);
     } else {
-      globalThis.isMaxSizeee = bindScopePath.identifier.name // 爆栈
+      globalThis.isMaxSizeee = bindScopePath.identifier.name; // 爆栈
       return t.tsUnknownKeyword();
     }
   },

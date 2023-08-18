@@ -24,7 +24,7 @@ export const unionUtils = {
                       : t.isTSUnionType(params.typeAnnotation)
                       ? params.typeAnnotation.types
                       : params.typeAnnotation || params
-                  )
+                  ).flatMap(ts => t.isTSInterfaceDeclaration(ts) ? ts.body?.body?.flatMap(v => v.typeAnnotation?.typeAnnotation) : ts)
                 ),
                 isMaxSizeee: tsyTypes.find((t) => t.isMaxSizeee),
               }

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import utils from "../utils";
 import config from './config';
+import initGlobalThis from '../utils/helpers/initGlobalThis'
 import type { Disposable } from 'vscode';
 
 globalThis.loopPathLimit = 5;
@@ -21,13 +22,9 @@ export default class CoreTypeAst {
     }
   }, 1000);
   install() {
-    globalThis.exportsIndentifer = {};
-    globalThis.reactPropsAndState = {};
-    globalThis.returnStatement = null;
+    initGlobalThis();
     this.EventListenersMap.push(vscode.workspace.onDidChangeTextDocument(this.transformASTActiveEditor), vscode.workspace.onDidOpenTextDocument(this.transformAST), vscode.window.onDidChangeActiveTextEditor((...args) => {
-      globalThis.exportsIndentifer = {};
-      globalThis.reactPropsAndState = {};
-      globalThis.returnStatement = null;
+      initGlobalThis();
       this.transformASTActiveEditor(...args);
     }), config.installConfiguration());
   }

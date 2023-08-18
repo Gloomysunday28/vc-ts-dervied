@@ -5,6 +5,7 @@ import type { KeyofObject, UnionFlowType } from "../../interface";
 import handleTsAst from "./handleTsAst";
 import { getReturnBulletTypeAnnotation } from "../../core/visitors/FunctionDeclaration";
 import operator from "../helpers/operator";
+import source from "../helpers/source";
 import type {
   ObjectTypeProperty,
   ObjectTypeSpreadProperty,
@@ -17,8 +18,9 @@ import type {
 import * as t from "@babel/types";
 import { esRender } from "../../core/render/es";
 import { unionUtils } from "../helpers/union";
-import exportTsAst from "../../utils/tsTypes/exportTsAst";
+import exportTsAst, { traverseProgram } from "../../utils/tsTypes/exportTsAst";
 import reactTsAst from "../../utils/tsTypes/react";
+import variableReact from '../../utils/helpers/variable'
 
 //  js类型与Flow ast映射关系 只针对该类型生成TSType
 const generateTsTypeMap: {
@@ -135,7 +137,6 @@ const generateTsTypeMap: {
     option?: GenerateTsAstMapsOption
   ) => {
     const { init } = node;
-
     return generateTsTypeMaps[(init as Expression)?.type]?.(init, path, option);
   },
   NewExpression(node: UnionFlowType<Node, "NewExpression">, path) {
@@ -241,18 +242,43 @@ const generateTsTypeMap: {
                     }
                   }
                 }
-                const tsType = t.tsPropertySignature(
-                  t.stringLiteral(keyName),
-                  t.tsTypeAnnotation(
-                    generateTsTypeMap[
-                      (propert as ObjectTypeProperty).value?.type ||
-                        propert?.type
-                    ]?.(propert?.value || propert, path)
+                let variableNode, tsType, keys = []
+                if (
+                  t.isIdentifier(
+                    (propert as ObjectTypeProperty)?.value || propert
                   )
-                );
+                ) {
+                  const { node, isExpression } = source.getIdentifierSource(
+                    path,
+                    (propert as ObjectTypeProperty)?.value || propert
+                  );
+                  variableNode = node
+                  if (isExpression) {
+                    keys.push((propert as ObjectTypeProperty)?.value?.name || propert?.name)
+                  }
+                }
+
+                if (variableNode) {
+                  keys.unshift(...reactTsAst.getVariableKeys(variableNode, path))
+                  if (keys.length) {
+                    tsType = variableReact(keys, path, keyName)
+                  } 
+                } else {
+                  tsType = t.tsPropertySignature(
+                    t.stringLiteral(keyName),
+                    t.tsTypeAnnotation(
+                      generateTsTypeMap[
+                        (propert as ObjectTypeProperty).value?.type ||
+                          propert?.type
+                      ]?.(propert?.value || propert, path)
+                    )
+                  );
+                }
                 tsType.optional =
                   option?.optional ||
                   t.isOptionalMemberExpression(propert.value);
+
+            
                 return tsType;
               }
             }
@@ -282,7 +308,7 @@ const generateTsTypeMap: {
         return typeAnnotation;
       }
     } else {
-      return generateTsTypeMap[argument?.type]?.(argument, path)
+      return generateTsTypeMap[argument?.type]?.(argument, path);
     }
   },
   ArrowFunctionExpression: (
@@ -348,6 +374,10 @@ const generateTsTypeMap: {
     const { property, object } = node;
     const { parent } = path || {};
 
+    if (t.isOptionalMemberExpression(object)) {
+      return generateTsTypeMap.MemberExpression(object, path);
+    }
+
     const tsType = reactTsAst.getReactMemberExpression(node, path);
     if (tsType) {
       return tsType;
@@ -386,7 +416,7 @@ const generateTsTypeMap: {
         //   );
         //   return react.getDeepPropertyTSType(propsTSType, keys, path);
         // }
-      
+
         const tsType = esRender.renderESGeneric(property, path);
         if (tsType) return tsType;
       }
@@ -417,9 +447,9 @@ const generateTsTypeMap: {
     path: any,
     option?: GenerateTsAstMapsOption
   ) => {
-    const tsType = generateTsTypeMap.MemberExpression(node, path, option)
+    const tsType = generateTsTypeMap.MemberExpression(node, path, option);
     if (tsType) {
-      return tsType
+      return tsType;
     }
     if (t.isIdentifier(object)) {
       const identifierPath = path.scope.getBinding(object.name)?.identifier;
@@ -463,7 +493,7 @@ const generateTsTypeMap: {
         (elements as TSType[])?.map((ele) => {
           globalThis.arrayExpressionElement = ele;
           if (t.isIdentifier(ele) || t.isSpreadElement(ele)) {
-             return generateTsTypeMap.Identifier(ele.argument || ele, path)
+            return generateTsTypeMap.Identifier(ele.argument || ele, path);
           }
 
           return generateTsTypeMap[ele.type](ele, path);
@@ -495,6 +525,7 @@ const generateTsTypeMap: {
   },
   Identifier(node: UnionFlowType<TSType, "Identifier">, path, option) {
     const tsyTypes = [];
+    globalThis.identifierName = node.name;
     const isBaseIdentifier = baseTsAstMaps.find((baseTSType) =>
       baseTSType.startsWith(node.name)
     );
@@ -511,7 +542,7 @@ const generateTsTypeMap: {
         const tsType = tsyTypes[0];
         return t.isTSTypeAnnotation(tsType) ? tsType.typeAnnotation : tsType;
       } else {
-        return unionUtils.UnionType(tsyTypes, false)
+        return unionUtils.UnionType(tsyTypes, false);
       }
     }
 
@@ -541,8 +572,14 @@ const generateTsTypeMap: {
       buildASTRequire = esRender.renderESGeneric(callee.property);
     }
 
-    return (callee.property?.name === 'resolve' || callee.property?.name === 'reject') && callExpressionArguments
-      ? unionUtils.UnionType(callExpressionArguments?.map(exp => generateTsTypeMap[exp.type]?.(exp,path)))
+    return (callee.property?.name === "resolve" ||
+      callee.property?.name === "reject") &&
+      callExpressionArguments
+      ? unionUtils.UnionType(
+          callExpressionArguments?.map((exp) =>
+            generateTsTypeMap[exp.type]?.(exp, path)
+          )
+        )
       : buildASTRequire || t.tsUnknownKeyword();
   },
   AssignmentExpression(node: UnionFlowType<TSType, "CallExpression">, path) {
@@ -566,7 +603,9 @@ const generateTsTypeMap: {
     ]);
   },
   UnaryExpression(node: UnionFlowType<Node, "UnaryExpression">, path) {
-    return generateTsTypeMap[operator.operatorType(node.operator, node, path)]?.();
+    return generateTsTypeMap[
+      operator.operatorType(node.operator, node, path)
+    ]?.();
   },
 };
 

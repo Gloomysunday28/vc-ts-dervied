@@ -4,6 +4,7 @@ import * as t from "@babel/types";
 import { UnionFlowType } from "../../interface";
 import exportTsAst from "./exportTsAst";
 import { generateTsTypeMaps } from "./generateTsAstMaps";
+import source from "../helpers/source";
 
 export default {
   reactMarkFields: ["props", "state"],
@@ -119,6 +120,17 @@ export default {
       };
     }
   },
+  getVariableKeys(node: UnionFlowType<t.Node, 'Identifier'>, path) {
+    const keys = []
+    let variableNode = node
+    while (variableNode && t.isIdentifier(variableNode)) {
+      keys.unshift(variableNode.name)
+      const { node: identifierNode } = source.getIdentifierSource(path, variableNode) || {}
+      variableNode = identifierNode
+    }
+
+    return keys
+  },
   // 获取x.y.z格式的keys集合 -> [x, y, z]
   getPropsAndStateMemberExpression(node, isReactComponent = true /* 解析 */) {
     let { object, property } = node;
@@ -223,9 +235,10 @@ export default {
   },
   getReactMemberExpression(
     node: UnionFlowType<t.Node, "MemberExpression">,
-    path
+    path,
+    memberKeys?: string[]
   ) {
-    if (!t.isMemberExpression(node) && !t.isOptionalMemberExpression(node)) return;
+    if (!memberKeys && !t.isMemberExpression(node) && !t.isOptionalMemberExpression(node)) return;
     const { property, object, keys } = this.getPropsAndStateMemberExpression(
       node,
       true
@@ -246,7 +259,7 @@ export default {
           (tsTypeParam) =>
             tsTypeParam?.key?.name ===
             (property?.name === "props"
-              ? globalThis?.returnStatement?.argument?.name
+              ? globalThis.identifierName
               : property.name)
         );
         const objectTsType = body.find((tsTypeParam) =>
@@ -267,7 +280,7 @@ export default {
         const {
           body: { body = [] },
         } = state;
-        const key = keys.shift();
+        const key = memberKeys ? memberKeys.shift() : keys.shift();
         const tsType = body.find(
           (tsTypeParam) =>
             tsTypeParam?.key?.name ===
@@ -288,7 +301,7 @@ export default {
         if (tsType) {
           return this.getTSPropertySignatureTypeAnnotation(
             tsType.typeAnnotation.typeAnnotation,
-            keys
+            memberKeys || keys
           );
         }
         if (objectTsType) {
@@ -308,7 +321,7 @@ export default {
       ) {
         return this.getDeepPropertyTSType(
           scopeNode.path.node.init.property.name === "props" ? props : state,
-          keys,
+          memberKeys || keys,
           path
         );
       }
