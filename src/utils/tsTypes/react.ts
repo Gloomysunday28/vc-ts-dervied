@@ -137,7 +137,7 @@ export default {
     const keys = [];
 
     while (t.isMemberExpression(object)) {
-      keys.unshift(property.name);
+      keys.unshift(property?.name);
       property = object.property;
       object = object.object;
     }
@@ -187,7 +187,7 @@ export default {
     ? tsReference.members
     : []
   },
-  getDeepPropertyTSType(props, keys, path) {
+  getDeepPropertyTSType(props/* ts类型 */, keys, path) {
     if (props) {
       let key,
         anotherProps = props,

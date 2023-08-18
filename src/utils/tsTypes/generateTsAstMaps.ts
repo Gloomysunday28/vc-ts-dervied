@@ -242,18 +242,19 @@ const generateTsTypeMap: {
                     }
                   }
                 }
-                let variableNode, tsType, keys = []
+                let variableNode, isVariableDeclarator, tsType, keys = []
                 if (
                   t.isIdentifier(
                     (propert as ObjectTypeProperty)?.value || propert
                   )
                 ) {
-                  const { node, isExpression } = source.getIdentifierSource(
+                  const sourceNode = source.getIdentifierSource(
                     path,
                     (propert as ObjectTypeProperty)?.value || propert
                   );
-                  variableNode = node
-                  if (isExpression) {
+                  variableNode = sourceNode.node
+                  isVariableDeclarator = !!(sourceNode.isVariableDeclarator)
+                  if (sourceNode.isExpression) {
                     keys.push((propert as ObjectTypeProperty)?.value?.name || propert?.name)
                   }
                 }
@@ -261,7 +262,7 @@ const generateTsTypeMap: {
                 if (variableNode) {
                   keys.unshift(...reactTsAst.getVariableKeys(variableNode, path))
                   if (keys.length) {
-                    tsType = variableReact(keys, path, keyName)
+                    tsType = variableReact(keys, path, keyName, isVariableDeclarator)
                   } 
                 } else {
                   tsType = t.tsPropertySignature(
@@ -277,8 +278,7 @@ const generateTsTypeMap: {
                 tsType.optional =
                   option?.optional ||
                   t.isOptionalMemberExpression(propert.value);
-
-            
+       
                 return tsType;
               }
             }
@@ -375,7 +375,10 @@ const generateTsTypeMap: {
     const { parent } = path || {};
 
     if (t.isOptionalMemberExpression(object)) {
-      return generateTsTypeMap.MemberExpression(object, path);
+      const memberTSType = generateTsTypeMap.MemberExpression(object, path);
+      if (t.isIdentifier(property)) {
+        return getDeepPropertyTSType(memberTSType, [property.name], path)
+      }
     }
 
     const tsType = reactTsAst.getReactMemberExpression(node, path);
@@ -400,22 +403,22 @@ const generateTsTypeMap: {
         tsType.optional = option.optional;
         return tsType;
       } else {
-        // const { propsTSType } = react.getGlobalTSInterface(path, {
-        //   typeName: {
-        //     name: property.name,
-        //   },
-        // });
+        const { propsTSType } = react.getGlobalTSInterface(path, {
+          typeName: {
+            name: property.name,
+          },
+        });
 
-        // if (propsTSType) {
-        //   const { keys } = react.getPropsAndStateMemberExpression(
-        //     {
-        //       object,
-        //       property,
-        //     },
-        //     false
-        //   );
-        //   return react.getDeepPropertyTSType(propsTSType, keys, path);
-        // }
+        if (propsTSType) {
+          const { keys } = react.getPropsAndStateMemberExpression(
+            {
+              object,
+              property,
+            },
+            false
+          );
+          return react.getDeepPropertyTSType(propsTSType, keys, path);
+        }
 
         const tsType = esRender.renderESGeneric(property, path);
         if (tsType) return tsType;
@@ -532,7 +535,7 @@ const generateTsTypeMap: {
     if (isBaseIdentifier) {
       tsyTypes.push(generateTsTypeMap[isBaseIdentifier]());
     }
-    const typeAnnotation = exportTsAst(node, node, path);
+    const typeAnnotation = exportTsAst(node, option?.member || node, path);
     if (typeAnnotation) {
       return typeAnnotation;
     }

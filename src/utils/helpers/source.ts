@@ -9,15 +9,16 @@ export default {
       const variable = source.path.container.find(node => isVariableDeclarator(node));
       if (variable && isIdentifier(variable.init)) {
         return {
-          node:variable.init,
-          isExpression: false
-        }
+          node: variable.init,
+          isExpression: false,
+          isVariableDeclarator: node.name === variable.id.name
+        };
       }
       if (variable && isLogicalExpression(variable.init)) {
         return {
           node: isIdentifier(variable.init.left) ? variable.init.left : variable.init.right,
-          isExpression: true
-        }
+          isExpression: true,
+        };
       }
     }
   }

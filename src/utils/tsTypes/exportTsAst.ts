@@ -25,10 +25,11 @@ export const getMemoryExportTypeAST = ({
   }
 };
 
-export const traverseProgram = (path, identifierName, object, property) => {
+// 在根目录下获取类型
+export const traverseProgram = (path, tsInterfacename, object, property) => {
   const { propsTSType } = react.getGlobalTSInterface(path, {
     typeName: {
-      name: identifierName,
+      name: tsInterfacename,
     },
   });
 
@@ -40,7 +41,7 @@ export const traverseProgram = (path, identifierName, object, property) => {
       },
       false
     );
-    return react.getDeepPropertyTSType(propsTSType, keys, path);
+    return object.name === property.name ? propsTSType : react.getDeepPropertyTSType(propsTSType, keys, path);
   }
 };
 
@@ -121,6 +122,13 @@ export default function (object, property, path) {
       }
     } else {
       return generateTsTypeMaps[referencePath?.path?.node?.type]?.(referencePath?.path?.node, referencePath?.path);
+    }
+  } else if (t.isMemberExpression(object)) {
+    const memberTS = generateTsTypeMaps.MemberExpression(object, path);
+    if (memberTS) {
+      if (t.isTSTypeLiteral(memberTS)) {
+        return memberTS.members?.find(m => ((m as t.TSPropertySignature)?.key as t.Identifier).name === property?.name)?.typeAnnotation?.typeAnnotation;
+      }
     }
   }
 }
