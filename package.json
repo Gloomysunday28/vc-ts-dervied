@@ -1,8 +1,8 @@
 {
   "name": "t-typescript-auto-derive",
-  "displayName": "Typescript-Auto-Derive",
+  "displayName": "Typescript Auto Derive",
   "description": "",
-  "version": "0.0.21",
+  "version": "0.0.22",
   "publisher": "mrCai",
   "engines": {
     "vscode": "^1.80.0"
