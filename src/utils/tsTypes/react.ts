@@ -56,7 +56,7 @@ export default {
                 }
                 return tsType;
               }),
-              ...exportTsAstTs?.body?.body,
+              ...exportTsAstTs?.body ? exportTsAstTs?.body?.body : [],
             ];
           }
           path.skip();
@@ -108,7 +108,7 @@ export default {
       let stateTSType;
       if (
         (props && t.isIdentifier(props.typeName)) ||
-        (state && t.isIdentifier(state.typeName))
+        (state && t.isIdentifier(state?.typeName))
       ) {
         const interfaceRes = this.getGlobalTSInterface(path, props, state);
         propsTSType = interfaceRes.propsTSType;
@@ -259,7 +259,7 @@ export default {
           (tsTypeParam) =>
             tsTypeParam?.key?.name ===
             (property?.name === "props"
-              ? globalThis.identifierName
+              ? globalThis.identifierName || globalThis.returnStatement.argument.name
               : property.name)
         );
         const objectTsType = body.find((tsTypeParam) =>

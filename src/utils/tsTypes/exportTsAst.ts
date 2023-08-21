@@ -92,6 +92,9 @@ export default function (object, property, path) {
     }
 
     const referencePath = path.scope.getAllBindings()[object.name];
+    const { propsTSType } = react.getGlobalTSInterface(path, {
+      typeName: object
+    })
     if (referencePath?.kind === "module") {
       const importPath = referencePath.path.parent?.source.value;
       const content = fs.getFsContent(fs.getResolvePath(importPath));
@@ -120,6 +123,8 @@ export default function (object, property, path) {
           return tsAST;
         }
       }
+    } else if (propsTSType) {
+      return propsTSType
     } else {
       return generateTsTypeMaps[referencePath?.path?.node?.type]?.(referencePath?.path?.node, referencePath?.path);
     }

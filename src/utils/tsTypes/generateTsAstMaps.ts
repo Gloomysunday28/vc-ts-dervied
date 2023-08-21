@@ -403,21 +403,21 @@ const generateTsTypeMap: {
         tsType.optional = option.optional;
         return tsType;
       } else {
-        const { propsTSType } = react.getGlobalTSInterface(path, {
+        const { propsTSType } = reactTsAst.getGlobalTSInterface(path, {
           typeName: {
             name: property.name,
           },
         });
 
         if (propsTSType) {
-          const { keys } = react.getPropsAndStateMemberExpression(
+          const { keys } = reactTsAst.getPropsAndStateMemberExpression(
             {
               object,
               property,
             },
             false
           );
-          return react.getDeepPropertyTSType(propsTSType, keys, path);
+          return reactTsAst.getDeepPropertyTSType(propsTSType, keys, path);
         }
 
         const tsType = esRender.renderESGeneric(property, path);
