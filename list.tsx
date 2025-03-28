@@ -34,8 +34,12 @@ const List = () => {
             className="py-4 flex items-center hover:bg-gray-50 cursor-pointer"
           >
             <div className="ml-4 flex-1">
-              <h3 className="text-sm font-medium text-gray-900">{item.title}</h3>
-              <p className="text-sm text-gray-500">{item.description}</p>
+              <h3 className={`text-sm font-medium ${item.id === 2 ? 'text-red-500' : 'text-gray-900'}`}>
+                {item.title}
+              </h3>
+              <p className={`text-sm ${item.id === 2 ? 'text-red-400' : 'text-gray-500'}`}>
+                {item.description}
+              </p>
             </div>
             <div className="ml-4">
               <svg 
