@@ -1,72 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
-interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
-  children: React.ReactNode;
-}
-
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setIsVisible(true);
-    } else {
-      const timer = setTimeout(() => setIsVisible(false), 300);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
-
-  if (!isVisible) return null;
-
+const Modal = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* 背景遮罩 */}
-      <div 
-        className={`fixed inset-0 bg-black transition-opacity duration-300 ${
-          isOpen ? 'opacity-50' : 'opacity-0'
-        }`}
-        onClick={onClose}
-      />
-      
-      {/* 模态框 */}
-      <div 
-        className={`relative bg-white rounded-lg shadow-xl w-full max-w-md m-4 transform transition-all duration-300 ${
-          isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
-        }`}
-      >
-        {/* 头部 */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h3 className="text-xl font-semibold text-gray-900">{title}</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 focus:outline-none"
-          >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      <div className="fixed inset-0 bg-black opacity-50" />
+      <div className="relative bg-white rounded-lg shadow-xl w-[480px] max-h-[90vh] overflow-auto">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h3 className="text-xl font-medium">标题</h3>
+          <button className="text-gray-400 hover:text-gray-500">
+            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </button>
         </div>
-
-        {/* 内容区域 */}
+        
         <div className="p-6">
-          {children}
+          这里是模态框内容
         </div>
 
-        {/* 底部按钮区域 */}
-        <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-          >
+        <div className="flex justify-end space-x-2 p-4 border-t">
+          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
             取消
           </button>
-          <button
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            确认
+          <button className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+            确定
           </button>
         </div>
       </div>
